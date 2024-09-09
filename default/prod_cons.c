@@ -1,7 +1,6 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 
 typedef struct sharedobject {
@@ -14,7 +13,7 @@ typedef struct sharedobject {
 
 void *producer(void *arg) {
 	so_t *so = arg;
-	int *ret = malloc(sizeof(int));
+	int *ret = malloc(sizeof(int) * 1);
 	FILE *rfile = so->rfile;
 	int i = 0;
 	char *line = NULL;
@@ -69,17 +68,21 @@ int main (int argc, char *argv[])
 	pthread_t prod[100];
 	pthread_t cons[100];
 	int Nprod, Ncons;
-	int rc;   long t;
+	int rc = 0;
+    long t = 0;
 	int *ret;
 	int i;
 	FILE *rfile;
+
 	if (argc == 1) {
 		printf("usage: ./prod_cons <readfile> #Producer #Consumer\n");
 		exit (0);
 	}
-	so_t *share = malloc(sizeof(so_t));
+
+	so_t *share = malloc(sizeof(so_t) * 1);
 	memset(share, 0, sizeof(so_t));
 	rfile = fopen((char *) argv[1], "r");
+
 	if (rfile == NULL) {
 		perror("rfile");
 		exit(0);
@@ -98,6 +101,7 @@ int main (int argc, char *argv[])
 	share->rfile = rfile;
 	share->line = NULL;
 	pthread_mutex_init(&share->lock, NULL);
+
 	for (i = 0 ; i < Nprod ; i++)
 		pthread_create(&prod[i], NULL, producer, share);
 	for (i = 0 ; i < Ncons ; i++)
@@ -112,6 +116,7 @@ int main (int argc, char *argv[])
 		rc = pthread_join(prod[i], (void **) &ret);
 		printf("main: producer_%d joined with %d\n", i, *ret);
 	}
+
 	pthread_exit(NULL);
 	exit(0);
 }

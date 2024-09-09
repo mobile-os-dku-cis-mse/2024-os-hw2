@@ -1,0 +1,6 @@
+threading_test
+threading
+*.o
+tests
+*.vgcore
+.idea
