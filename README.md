@@ -11,18 +11,18 @@ Note that address space (memory) is shared among threads in a process,
 
 The example code includes some primitive code for multiple threads usage.
 It basically tries to read a file and print it out on the screen.
-It consists of three threads: main thread for admin job 
-    second thread serves as a producer: reads lines from a file, and put the line string on the shared buffer
-    third thread serves as a consumer:  get strings from the shared buffer, and print the line out on the screen
+It consists of three threads: the main thread is for admin job 
+    second thread serves as a producer: reads lines from a file and puts the line string on the shared buffer
+    third thread serves as a consumer:  gets strings from the shared buffer and prints the line out on the screen
 
 Unfortunately, the code is not working because threads runs independently from others.
-the result is that different threads access invalid memory, and have wrong value, and crash or waiting for terminated thread infinitely.
-To make it working, you have to touch the code so that the threads have correct value.
+The result is that different threads access invalid memory, have wrong values, and crash or wait for the terminated thread infinitely.
+To make it work, you have to touch the code so that the threads have the correct value.
 
 To have correct values in threads, you need to keep consistency for data touched by multiple threads.
-To keeping consistency, you should carefully control the execution among threads, which is called as synchronization.
+To keep consistency, you should carefully control the execution among threads, which is called synchronization.
 
-pthread_mutex_lock()/pthread_mutex_unlock are the functions for pthreads synchorinization.
+pthread_mutex_lock()/pthread_mutex_unlock are the functions for threads synchronization.
 For condition variable, you may need to look up functions such as pthread_cond_wait()/pthread_cond_signal().
 
 The goals from HW2 are 
@@ -31,25 +31,27 @@ The goals from HW2 are
 
 2. enhance it to support multiple consumers.
 
-3. Make consumer(s) to gather some statistics of the given text in the file. 
+3. Make consumer(s) to gather some statistics of the given text file. 
 Basically, count the number of each alphabet character in the line.
 char_stat.c can be a hint for gathering statistics.
 At the end of execution, you should print out the statistics of the entire text.
 Beat the fastest execution, maximizing the concurrency!
 
-To run a program, you may give filename to read and # of producers and # of consumers.
-In case of single producer, 2 consumers, reading 'sample file'; you may need to execute your program by
+To run a program, you may give a filename to read and # of producers and # of consumers.
+In the case of a single producer, two consumers, reading 'sample file'; you may need to execute your program by
 ./prod_cons ./sample 1 2 
 
-You can download some example input source code from the link: [https://mobile-os.dankook.ac.kr/data/FreeBSD9-orig.tar] or  
+You can download some example input source code from the link: [http://mobile-os.dankook.ac.kr/data/FreeBSD9-orig.tar] or  
 you can use /opt/FreeBSD9-orig.tar from our server.
 
-Please make some document so that I can follow to build/compile and run the code.
-It would be better if the document includes some introduction and some important implementation details or your program structure.
+Please make a document so that I can follow it to build/compile and run the code.
+It would be better if the document included an introduction and some important implementation details of your program structure.
 
-htop is a program that shows threads execution in the system.
+To measure the execution time, consider using clock_gettime() or gettimeofday().
 
-Measure & compare of execution time for different # of threads
+htop is a program that shows the execution of threads in the system.
+
+Measure & compare the execution time for different # of threads
 
 Happy hacking!
 Seehwan
