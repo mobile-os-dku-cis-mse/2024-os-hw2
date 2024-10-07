@@ -3,14 +3,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
-typedef struct sharedobject {
-	FILE *rfile;
-	int linenum;
-	char *line;
-	pthread_mutex_t lock;
-	int full;
-} so_t;
+#include "functions.h"
+#include "struct.h"
 
 void *producer(void *arg) {
 	so_t *so = arg;
@@ -21,83 +15,61 @@ void *producer(void *arg) {
 	size_t len = 0;
 	ssize_t read = 0;
 
-	while (1) {
-		read = getdelim(&line, &len, '\n', rfile);
-		if (read == -1) {
-			so->full = 1;
-			so->line = NULL;
-			break;
-		}
-		so->linenum = i;
-		so->line = strdup(line);      /* share the line */
-		i++;
-		so->full = 1;
-	}
-	free(line);
-	printf("Prod_%x: %d lines\n", (unsigned int)pthread_self(), i);
+	pthread_mutex_lock(&so->lock);
+	read_line(&read, line, &len, rfile, so, &i);
+	pthread_mutex_unlock(&so->lock);
+
+	// free(line);
+	printf("\nProd_%x: %d lines\n", (unsigned int)pthread_self(), i); // * Print the number of lines read
 	*ret = i;
-	pthread_exit(ret);
+	pthread_exit(ret); // * Terminate the thread and return the number of lines read
 }
 
 void *consumer(void *arg) {
 	so_t *so = arg;
 	int *ret = malloc(sizeof(int));
-	int i = 0;
+	int i = 0; // * Index of current line
 	int len;
 	char *line;
 
-	while (1) {
-		line = so->line;
-		if (line == NULL) {
-			break;
-		}
-		len = strlen(line);
-		printf("Cons_%x: [%02d:%02d] %s",
-			(unsigned int)pthread_self(), i, so->linenum, line);
-		free(so->line);
-		i++;
-		so->full = 0;
-	}
-	printf("Cons: %d lines\n", i);
+	pthread_mutex_lock(&so->lock);
+	process_line(line, &len, so, &i);
+	pthread_mutex_unlock(&so->lock);
+
+	printf("Cons: %d lines\n\n", i);
 	*ret = i;
 	pthread_exit(ret);
 }
-
 
 int main (int argc, char *argv[])
 {
 	pthread_t prod[100];
 	pthread_t cons[100];
-	int Nprod, Ncons;
+	int Nprod, Ncons = 0; // * Number of producers and Number of consumers
 	int rc;   long t;
-	int *ret;
+	int *ret = 0;
 	int i;
+
 	FILE *rfile;
 	if (argc == 1) {
 		printf("usage: ./prod_cons <readfile> #Producer #Consumer\n");
 		exit (0);
 	}
+
 	so_t *share = malloc(sizeof(so_t));
-	memset(share, 0, sizeof(so_t));
+	memset(share, 0, sizeof(so_t)); // * Initialize shared memory value
+	pthread_cond_init(&share->prod_cond, NULL);
+	pthread_cond_init(&share->cons_cond, NULL);
+
 	rfile = fopen((char *) argv[1], "r");
-	if (rfile == NULL) {
-		perror("rfile");
-		exit(0);
-	}
-	if (argv[2] != NULL) {
-		Nprod = atoi(argv[2]);
-		if (Nprod > 100) Nprod = 100;
-		if (Nprod == 0) Nprod = 1;
-	} else Nprod = 1;
-	if (argv[3] != NULL) {
-		Ncons = atoi(argv[3]);
-		if (Ncons > 100) Ncons = 100;
-		if (Ncons == 0) Ncons = 1;
-	} else Ncons = 1;
+	
+	check_syntax(rfile, &Nprod, &Ncons, argv);
 
 	share->rfile = rfile;
 	share->line = NULL;
 	pthread_mutex_init(&share->lock, NULL);
+
+	// * Create *Nprod* producers and *Ncons* consumers (as per defined amount)
 	for (i = 0 ; i < Nprod ; i++)
 		pthread_create(&prod[i], NULL, producer, share);
 	for (i = 0 ; i < Ncons ; i++)
@@ -115,4 +87,3 @@ int main (int argc, char *argv[])
 	pthread_exit(NULL);
 	exit(0);
 }
-
