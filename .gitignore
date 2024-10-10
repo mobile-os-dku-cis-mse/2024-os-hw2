@@ -1,0 +1,4 @@
+/FreeBSD9-orig/
+*.o
+/cmake-build-debug/
+FreeBSD9-orig.tar

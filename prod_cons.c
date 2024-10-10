@@ -12,6 +12,9 @@ typedef struct sharedobject {
 	int full;
 } so_t;
 
+pthread_cond_t prod_cv = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond_cv = PTHREAD_COND_INITIALIZER;
+
 void *producer(void *arg) {
 	so_t *so = arg;
 	int *ret = malloc(sizeof(int));
@@ -22,16 +25,24 @@ void *producer(void *arg) {
 	ssize_t read = 0;
 
 	while (1) {
+        pthread_mutex_lock(&so->lock);
+		while(so->full == 1) {
+			pthread_cond_wait(&prod_cv, &so->lock);
+		}
 		read = getdelim(&line, &len, '\n', rfile);
 		if (read == -1) {
 			so->full = 1;
 			so->line = NULL;
+			pthread_cond_signal(&cond_cv);
+			pthread_mutex_unlock(&so->lock);
 			break;
 		}
 		so->linenum = i;
 		so->line = strdup(line);      /* share the line */
 		i++;
 		so->full = 1;
+		pthread_cond_signal(&cond_cv);
+		pthread_mutex_unlock(&so->lock);
 	}
 	free(line);
 	printf("Prod_%x: %d lines\n", (unsigned int)pthread_self(), i);
@@ -47,8 +58,14 @@ void *consumer(void *arg) {
 	char *line;
 
 	while (1) {
+		pthread_mutex_lock(&so->lock);
+		while(so->full == 0) {
+			pthread_cond_wait(&cond_cv, &so->lock);
+		}
 		line = so->line;
 		if (line == NULL) {
+			pthread_cond_broadcast(&prod_cv);
+			pthread_mutex_unlock(&so->lock);
 			break;
 		}
 		len = strlen(line);
@@ -57,6 +74,8 @@ void *consumer(void *arg) {
 		free(so->line);
 		i++;
 		so->full = 0;
+		pthread_cond_signal(&prod_cv);
+		pthread_mutex_unlock(&so->lock);
 	}
 	printf("Cons: %d lines\n", i);
 	*ret = i;
@@ -68,17 +87,21 @@ int main (int argc, char *argv[])
 {
 	pthread_t prod[100];
 	pthread_t cons[100];
+
 	int Nprod, Ncons;
 	int rc;   long t;
 	int *ret;
 	int i;
 	FILE *rfile;
+
 	if (argc == 1) {
 		printf("usage: ./prod_cons <readfile> #Producer #Consumer\n");
 		exit (0);
 	}
+
 	so_t *share = malloc(sizeof(so_t));
 	memset(share, 0, sizeof(so_t));
+
 	rfile = fopen((char *) argv[1], "r");
 	if (rfile == NULL) {
 		perror("rfile");
@@ -97,6 +120,7 @@ int main (int argc, char *argv[])
 
 	share->rfile = rfile;
 	share->line = NULL;
+
 	pthread_mutex_init(&share->lock, NULL);
 	for (i = 0 ; i < Nprod ; i++)
 		pthread_create(&prod[i], NULL, producer, share);
@@ -113,6 +137,6 @@ int main (int argc, char *argv[])
 		printf("main: producer_%d joined with %d\n", i, *ret);
 	}
 	pthread_exit(NULL);
+
 	exit(0);
 }
-
