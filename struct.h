@@ -10,8 +10,8 @@ typedef struct sharedobject {
 	char *line; // * Current line
 	pthread_mutex_t lock;
 	int full;
-	pthread_cond_t prod_cond;
-	pthread_cond_t cons_cond;
+	// pthread_cond_t prod_cond;
+	// pthread_cond_t cons_cond;
 } so_t;
 
 #endif

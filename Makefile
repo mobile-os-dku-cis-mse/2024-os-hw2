@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -Wall
+CFLAGS = -Wall -pthread
 
 TARGET = app
 
@@ -13,9 +13,6 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(SRCS) -o $(TARGET)
 	rm *.o
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm $(TARGET)
