@@ -12,6 +12,10 @@ typedef struct sharedobject {
 	int full;
 } so_t;
 
+/*
+파일에서 줄을 읽어와 공유 자원에 저장
+읽은 줄 수를 반환하는 프로듀서 스레드 역할을 수행
+*/
 void *producer(void *arg) {
 	so_t *so = arg;
 	int *ret = malloc(sizeof(int));
@@ -29,7 +33,7 @@ void *producer(void *arg) {
 			break;
 		}
 		so->linenum = i;
-		so->line = strdup(line);      /* share the line */
+		so->line = strdup(line);
 		i++;
 		so->full = 1;
 	}
@@ -39,6 +43,10 @@ void *producer(void *arg) {
 	pthread_exit(ret);
 }
 
+/*
+프로듀서가 생성한 줄을 읽고 출력
+총 몇 줄을 읽었는지를 반환하는 컨슈머 스레드 역할을 수행
+*/
 void *consumer(void *arg) {
 	so_t *so = arg;
 	int *ret = malloc(sizeof(int));
@@ -73,6 +81,13 @@ int main (int argc, char *argv[])
 	int *ret;
 	int i;
 	FILE *rfile;
+
+	/*
+	./prod_cons <readfile> prod cons
+	Default # of Producer = 1
+	Default # of Consumer = 1
+	Shared(in-Thread) object type *share
+	*/
 	if (argc == 1) {
 		printf("usage: ./prod_cons <readfile> #Producer #Consumer\n");
 		exit (0);
@@ -98,6 +113,7 @@ int main (int argc, char *argv[])
 	share->rfile = rfile;
 	share->line = NULL;
 	pthread_mutex_init(&share->lock, NULL);
+	// 뮤텍스를 사용하여 임계 구역(다수의 스레드가 동시에 접근할 수 없는 코드 블록)을 설정
 	for (i = 0 ; i < Nprod ; i++)
 		pthread_create(&prod[i], NULL, producer, share);
 	for (i = 0 ; i < Ncons ; i++)
@@ -115,4 +131,3 @@ int main (int argc, char *argv[])
 	pthread_exit(NULL);
 	exit(0);
 }
-
