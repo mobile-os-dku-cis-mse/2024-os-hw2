@@ -6,3 +6,4 @@ set(CMAKE_C_STANDARD 11)
 add_executable(prod_cond
         prod_cons.c
 )
+add_executable(char_stat char_stat.c)
