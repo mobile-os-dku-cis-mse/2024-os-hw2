@@ -8,8 +8,8 @@
 #define MAX_STRING_LENGTH 30
 #define ASCII_SIZE	256
 
-int stat [MAX_STRING_LENGTH];
-int stat2 [ASCII_SIZE];
+int stat[MAX_STRING_LENGTH];
+int stat2[ASCII_SIZE];
 
 /*
 line 변수
@@ -108,7 +108,6 @@ void *consumer(void *arg) {
 			stat[length-1]++;
 			pthread_mutex_unlock(&so->lock);
 
-			// number of the character in the sub-string
 			for (int i = 0 ; i < length ; i++) {
 				if (*cptr < 256 && *cptr > 1) {
 					pthread_mutex_lock(&so->lock);
