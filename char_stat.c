@@ -8,13 +8,13 @@
 #define ASCII_SIZE	256
 
 
-int stat [MAX_STRING_LENGTH];
-int stat2 [ASCII_SIZE];
+int stat [MAX_STRING_LENGTH]; // 단어 길이의 빈도수
+int stat2 [ASCII_SIZE]; // ASCII 문자에 대한 빈도수
 
 
 int main(int argc, char *argv[]) {
 	int i = 0;
-	int rc = 0;
+	int rc = 0; // return code
 	int sum = 0;
 	int line_num = 1;
 	char *line = NULL;
@@ -38,13 +38,13 @@ int main(int argc, char *argv[]) {
 	memset(stat2, 0, sizeof(stat));
 
 	while (1) {
-		char *cptr = NULL;
-		char *substr = NULL;
-		char *brka = NULL;
+		char *cptr = NULL; //character pointer - 문자열 순회
+		char *substr = NULL; //subString - 부분 문자열을 가리키는 포인터
+		char *brka = NULL; // break - strtok_r() 내부 상태 유지
 		char *sep = "{}()[],;\" \n\t^";
 
 		// For each line,
-		rc = getdelim(&line, &length, '\n', rfile);
+		rc = getdelim(&line, &length, '\n', rfile); // 한 줄 전체 읽기(동적 메모리 할당)
 		if (rc == -1) break;
 
 		cptr = line;
