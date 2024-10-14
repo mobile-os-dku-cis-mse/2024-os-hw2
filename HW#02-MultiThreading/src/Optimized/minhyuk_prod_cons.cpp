@@ -1,3 +1,9 @@
+/*
+* Author: Minhyuk Cho
+* Date: 2024-10-14
+* Description: Optimized Ver. minhyuk_prod_cons.cpp
+*/
+
 #include "word_count.h"
 
 void* producer(void* arg) {

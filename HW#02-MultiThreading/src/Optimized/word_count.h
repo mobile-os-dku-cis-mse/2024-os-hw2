@@ -1,7 +1,7 @@
 /*
 * Author: Minhyuk Cho
-* Date: 2024-10-12
-* Description: Optimizer word_count.h
+* Date: 2024-10-14
+* Description: Optimized Ver. word_count.h
 */
 
 #pragma once

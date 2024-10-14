@@ -1,6 +1,6 @@
 /*
 * Author: Minhyuk Cho
-* Date: 2024-10-12
+* Date: 2024-10-14
 * Description: Semaphore Ver. word_count.h
 */
 

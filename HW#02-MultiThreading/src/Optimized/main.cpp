@@ -1,7 +1,7 @@
 /*
 * Author: Minhyuk Cho
-* Date: 2024-10-12
-* Description: Semaphore Ver. main.cpp
+* Date: 2024-10-14
+* Description: Optimized Ver. main.cpp
 */
 
 #include "word_count.h"
