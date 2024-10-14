@@ -10,17 +10,20 @@ pthread_cond_t prod_cond, cons_cond;
 void check_syntax(FILE *rfile, int *Nprod, int *Ncons, char *argv[])
 {
     // * Check for file errors
-    if (rfile == NULL) {
+    if (rfile == NULL)
+    {
 		perror("rfile");
 		exit(0);
 	}
     // * Check the number of producers and consumers
-	if (argv[2] != NULL) {
+	if (argv[2] != NULL)
+    {
 		*Nprod = atoi(argv[2]);
 		if (*Nprod > 100) *Nprod = 100;
 		if (*Nprod == 0) *Nprod = 1;
 	} else *Nprod = 1;
-	if (argv[3] != NULL) {
+	if (argv[3] != NULL)
+    {
 		*Ncons = atoi(argv[3]);
 		if (*Ncons > 100) *Ncons = 100;
 		if (*Ncons == 0) *Ncons = 1;
@@ -31,14 +34,15 @@ void read_line(ssize_t *read, char *line, size_t *len, FILE* rfile, so_t *so, in
 {
     while (1)
     {     
-        while(so->full) pthread_cond_wait(&prod_cond, &so->lock); // * Make sure that the shared buffer is full
+        while(so->full) pthread_cond_wait(&prod_cond, &so->lock); // * Make sure that the shared buffer is empty
         pthread_mutex_lock(&so->lock); // * Lock the shared object
 
         // * Read a line (until '\n' is read) from the input file
         *read = getdelim(&line, len, '\n', rfile);
 
         // * If an error occurs, indicate that the buffer is full and break the loop
-        if (*read == -1) {
+        if (*read == -1)
+        {
             so->full = 1;
             so->line = NULL;
             pthread_mutex_unlock(&so->lock); // * Unlock the shared object
@@ -63,7 +67,7 @@ void process_line(char *line, int *len, so_t *so, int *i)
 {
     int val = *i;
     while (1) {
-        while(!so->full) pthread_cond_wait(&cons_cond, &so->lock); // * Make sure that the shared buffer is empty
+        while(!so->full) pthread_cond_wait(&cons_cond, &so->lock); // * Make sure that the shared buffer is full
         pthread_mutex_lock(&so->lock); // * Lock the shared object 
         line = so->line;
 

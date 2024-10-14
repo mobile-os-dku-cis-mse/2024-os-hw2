@@ -6,7 +6,8 @@
 #include "functions.h"
 #include "struct.h"
 
-void *producer(void *arg) {
+void *producer(void *arg)
+{
 	so_t *so = arg;
 	int *ret = malloc(sizeof(int));
 	FILE *rfile = so->rfile;
@@ -15,21 +16,23 @@ void *producer(void *arg) {
 	size_t len = 0;
 	ssize_t read = 0;
 
+	// * Read the line from the input file and move it to the shared buffer
 	read_line(&read, line, &len, rfile, so, &i);
 
-	// free(line);
 	printf("\nProd_%x: %d lines\n", (unsigned int)pthread_self(), i); // * Print the number of lines read
 	*ret = i;
 	pthread_exit(ret); // * Terminate the thread and return the number of lines read
 }
 
-void *consumer(void *arg) {
+void *consumer(void *arg)
+{
 	so_t *so = arg;
 	int *ret = malloc(sizeof(int));
 	int i = 0; // * Index of current line
 	int len;
 	char *line = NULL;
 
+	// * Read the line from the shared buffer and print it out
 	process_line(line, &len, so, &i);
 
 	printf("Cons: %d lines\n\n", i);
@@ -41,11 +44,12 @@ int main (int argc, char *argv[])
 {
 	pthread_t prod[100];
 	pthread_t cons[100];
-	int Nprod, Ncons = 0; // * Number of producers and Number of consumers
+	int Nprod, Ncons = 0;
 	int rc;   long t;
 	int *ret = 0;
 	int i;
 
+	// * Handle execution syntax error
 	FILE *rfile;
 	if (argc == 1) {
 		printf("usage: ./prod_cons <readfile> #Producer #Consumer\n");
@@ -78,11 +82,13 @@ int main (int argc, char *argv[])
 	printf("main continuing\n");
 
 	// * Collect the return value from the producer and consumer threads
-	for (i = 0 ; i < Ncons ; i++) {
+	for (i = 0 ; i < Ncons ; i++)
+	{
 		rc = pthread_join(cons[i], (void **) &ret);
 		printf("main: consumer_%d joined with %d\n", i, *ret);
 	}
-	for (i = 0 ; i < Nprod ; i++) {
+	for (i = 0 ; i < Nprod ; i++)
+	{
 		rc = pthread_join(prod[i], (void **) &ret);
 		printf("main: producer_%d joined with %d\n", i, *ret);
 	}
