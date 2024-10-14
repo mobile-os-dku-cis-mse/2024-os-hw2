@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
 			stat2['U']+stat2['u'], stat2['V']+stat2['v'],  stat2['W']+stat2['w'],  stat2['X']+stat2['x'],  stat2['Y']+stat2['y'],
 			stat2['Z']+stat2['z']);
 
-	if (line != NULL) free(line);	
+	if (line != NULL) free(line);
 	// Close the file
 	fclose(rfile);
 
