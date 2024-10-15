@@ -38,7 +38,7 @@ void read_line(ssize_t *read, char *line, size_t *len, FILE* rfile, so_t *so, in
         pthread_mutex_lock(&so->lock);
 
         // * Wait while the buffer is full
-        while (so->full) pthread_cond_wait(&prod_cond, &so->lock);
+        while (so->full && !so->end) pthread_cond_wait(&prod_cond, &so->lock);
 
         // * Read a line (until '\n' is read) from the input file
         *read = getdelim(&line, len, '\n', rfile);
@@ -48,8 +48,10 @@ void read_line(ssize_t *read, char *line, size_t *len, FILE* rfile, so_t *so, in
         {
             so->full = 1;
             so->line = NULL;
+            so->end = 1;
             pthread_mutex_unlock(&so->lock); // * Unlock the shared object
             pthread_cond_broadcast(&cons_cond); // * Signal all consumers that EOF is reached
+            pthread_cond_broadcast(&prod_cond);
             break;
         }
 
@@ -87,7 +89,7 @@ void process_line(char *line, int *len, so_t *so, int *i)
 
         // * Process the line
         line = so->line;
-        *len = strlen(line);  // Measure the length of the line
+        *len = strlen(line);  // * Measure the length of the line
         printf("Cons_%x: [%02d:%02d] %s", (unsigned int)pthread_self(), val, so->linenum, line);
         
         // * Free the memory used for the line and mark the buffer as empty
