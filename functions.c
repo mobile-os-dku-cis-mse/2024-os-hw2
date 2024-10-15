@@ -33,59 +33,77 @@ void check_syntax(FILE *rfile, int *Nprod, int *Ncons, char *argv[])
 void read_line(ssize_t *read, char *line, size_t *len, FILE* rfile, so_t *so, int *i)
 {
     while (1)
-    {     
-        while(so->full) pthread_cond_wait(&prod_cond, &so->lock); // * Make sure that the shared buffer is empty
-        pthread_mutex_lock(&so->lock); // * Lock the shared object
+    {
+        // * Lock the shared object
+        pthread_mutex_lock(&so->lock);
+
+        // * Wait while the buffer is full
+        while (so->full) pthread_cond_wait(&prod_cond, &so->lock);
 
         // * Read a line (until '\n' is read) from the input file
         *read = getdelim(&line, len, '\n', rfile);
 
-        // * If an error occurs, indicate that the buffer is full and break the loop
+        // * If an error occurs or EOF is reached
         if (*read == -1)
         {
             so->full = 1;
             so->line = NULL;
             pthread_mutex_unlock(&so->lock); // * Unlock the shared object
-            pthread_cond_broadcast(&cons_cond); // * Signal all consumers that the EOF is reached (or an error occured)
+            pthread_cond_broadcast(&cons_cond); // * Signal all consumers that EOF is reached
             break;
         }
 
-        // * Upon a successful return, share the line, move to the next line, and indicate that the buffer is full
+        // * Upon successful read, copy the line to the shared buffer and mark the buffer as full
         so->linenum = *i;
-        so->line = strdup(line);
+        so->line = strdup(line);  // * Copy the line into shared memory
         *i += 1;
-        so->full = 1;
+        so->full = 1; // * Indicate that the buffer is full
 
-        // * Unlock the shared object, send a signal to the consumer that a line is ready, and wait for a signal from consumer
-        pthread_mutex_unlock(&so->lock);
+        // * Signal consumers that a new line is available
         pthread_cond_signal(&cons_cond);
-        pthread_cond_wait(&prod_cond, &so->lock);
+
+        // * Unlock the shared object and allow consumers to work
+        pthread_mutex_unlock(&so->lock);
     }
 }
 
 void process_line(char *line, int *len, so_t *so, int *i)
 {
     int val = *i;
-    while (1) {
-        while(!so->full) pthread_cond_wait(&cons_cond, &so->lock); // * Make sure that the shared buffer is full
-        pthread_mutex_lock(&so->lock); // * Lock the shared object 
+    while (1)
+    {
+        // * Lock the shared object
+        pthread_mutex_lock(&so->lock);
+        
+        // * Wait while the buffer is empty
+        while (!so->full) pthread_cond_wait(&cons_cond, &so->lock);
+
+        // * Exit the loop if the producer has finished and there are no more lines
+        if (so->line == NULL)
+        {
+            pthread_mutex_unlock(&so->lock);
+            break;
+        }
+
+        // * Process the line
         line = so->line;
-
-        // * Exit the loop if there is no more line to read (line is empty)
-        if (line == NULL) break;
-
-        *len = strlen(line); // * Measure the length of the line
-        printf("Cons_%x: [%02d:%02d] %s",
-            (unsigned int)pthread_self(), val, so->linenum, line);
-            
+        *len = strlen(line);  // Measure the length of the line
+        printf("Cons_%x: [%02d:%02d] %s", (unsigned int)pthread_self(), val, so->linenum, line);
+        
+        // * Free the memory used for the line and mark the buffer as empty
         free(so->line);
         so->line = NULL;
-        so->full = 0; // * Indicate that the buffer is empty
+        so->full = 0; // * Buffer is now empty
 
-        // * Lock the lock and send a signal to the producer
-        pthread_mutex_unlock(&so->lock);
+        // * Signal producers that the buffer is empty and they can produce
         pthread_cond_signal(&prod_cond);
-        val++; // * Increment the number of lines (return value)
+
+        // * Unlock the shared object
+        pthread_mutex_unlock(&so->lock);
+
+        // * Increment the number of lines processed
+        val++; 
     }
+    // * Update the line count
     *i = val;
 }
