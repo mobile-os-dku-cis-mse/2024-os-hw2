@@ -1,6 +1,8 @@
 SRC =
 
-SRC_MAIN =	main.c
+SRC_MAIN =	main.c \
+			producers.c \
+			words_array.c \
 
 SRC_TEST =
 

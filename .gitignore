@@ -6,3 +6,4 @@ prod_cons_ref
 *.gcno
 *.gcda
 unit_tests
+.vscode
