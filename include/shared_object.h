@@ -16,6 +16,7 @@ typedef struct sharedobject {
 	pthread_cond_t not_full;      // Condition pour vérifier si le tampon n'est pas plein
 	pthread_cond_t not_empty;     // Condition pour vérifier si le tampon n'est pas vide
 	int done;                    // Indicateur de fin des producteurs
+    size_t alpha_char_number;
 } so_t;
 
 void parse_args(int argc, char *argv[], int *Nprod, int *Ncons);

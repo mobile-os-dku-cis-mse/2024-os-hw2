@@ -16,6 +16,7 @@ int main(int argc, char *argv[]) {
 	so_t *share = init_shared_object(rfile);
 	create_threads(prod, cons, Nprod, Ncons, share);
 	join_threads(prod, cons, Nprod, Ncons);
+    printf("Number of alphabets characters: %lu\n", share->alpha_char_number);
 	cleanup(share);
 	pthread_exit(NULL);
 	return 0;

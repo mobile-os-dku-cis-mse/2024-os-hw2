@@ -39,7 +39,7 @@ void *producer(void *arg)
 	}
 
 	free(line);
-	printf("Prod_%x: %d lines\n", (unsigned int)pthread_self(), i);
+	printf("Prod_%lx: %d lines\n", (unsigned long)pthread_self(), i);
 	*ret = i;
 	pthread_exit(ret);
 }
