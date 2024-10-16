@@ -116,7 +116,7 @@ int main (int argc, char *argv[])
 		exit (0);
 	}
 
-	so_t *share = malloc(sizeof(so_t));
+	so_t *share = malloc(sizeof(so_t)*10);
 	memset(share, 0, sizeof(so_t));
 
 	rfile = fopen((char *) argv[1], "r");

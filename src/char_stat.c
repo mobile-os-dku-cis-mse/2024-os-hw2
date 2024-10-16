@@ -38,20 +38,23 @@ int main(int argc, char *argv[]) {
 	memset(stat2, 0, sizeof(stat));
 
 	while (1) {
-		char *cptr = NULL;
+		char *cptr = NULL;  // 문자열의 시작점
 		char *substr = NULL;
 		char *brka = NULL;
-		char *sep = "{}()[],;\" \n\t^";
+		char *sep = "{}()[],;\" \n\t^"; // 구분자
 
 		// For each line,
-		rc = getdelim(&line, &length, '\n', rfile);
-		if (rc == -1) break;
+		rc = getdelim(&line, &length, '\n', rfile); // 파일로부터 한 줄을 읽음
+		if (rc == -1) break; // 읽기 함수의 반환 값이 -1이면 종료
 
-		cptr = line;
+		cptr = line; // line 가리키기
 #ifdef _IO_
 		printf("[%3d] %s\n", line_num++, line);
 #endif
+		// 라인을 토큰으로 구별
+		// substr이 NULL이 나올 때까지
 		for (substr = strtok_r(cptr, sep, &brka); substr; substr = strtok_r(NULL, sep, &brka)) {
+			// length
 			length = strlen(substr);
 			// update stats
 
@@ -107,4 +110,34 @@ int main(int argc, char *argv[]) {
 	fclose(rfile);
 
 	return 0;
+}
+
+
+void print_char_stat() {
+
+	// sum
+	int sum = 0;
+	for (int i = 0 ; i < 30 ; i++) {
+		sum += stat[i];
+	}
+
+	// print out distributions
+	printf("*** print out distributions *** \n");
+	printf("  #ch  freq \n");
+	for (int i = 0 ; i < 30 ; i++) {
+		int j = 0;
+		int num_star = stat[i]*80/sum;
+		printf("[%3d]: %4d \t", i+1, stat[i]);
+		for (j = 0 ; j < num_star ; j++)
+			printf("*");
+		printf("\n");
+	}
+	printf("       A        B        C        D        E        F        G        H        I        J        K        L        M        N        O        P        Q        R        S        T        U        V        W        X        Y        Z\n");
+	printf("%8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d\n",
+			stat2['A']+stat2['a'], stat2['B']+stat2['b'],  stat2['C']+stat2['c'],  stat2['D']+stat2['d'],  stat2['E']+stat2['e'],
+			stat2['F']+stat2['f'], stat2['G']+stat2['g'],  stat2['H']+stat2['h'],  stat2['I']+stat2['i'],  stat2['J']+stat2['j'],
+			stat2['K']+stat2['k'], stat2['L']+stat2['l'],  stat2['M']+stat2['m'],  stat2['N']+stat2['n'],  stat2['O']+stat2['o'],
+			stat2['P']+stat2['p'], stat2['Q']+stat2['q'],  stat2['R']+stat2['r'],  stat2['S']+stat2['s'],  stat2['T']+stat2['t'],
+			stat2['U']+stat2['u'], stat2['V']+stat2['v'],  stat2['W']+stat2['w'],  stat2['X']+stat2['x'],  stat2['Y']+stat2['y'],
+			stat2['Z']+stat2['z']);
 }
