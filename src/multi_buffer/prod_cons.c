@@ -102,18 +102,12 @@ void *producer(void *arg) {
 	int i = 0;
 	long current_pos = start_pos;
 
-	if(start_pos != 0) {
-		read = getdelim(&line, &len, '\n', rfile);
-		if(read == -1) {
-			current_pos += read;
-			free(line);
-			line = NULL;
-			len = 0;
-		}
-	}
+	while ((read = getdelim(&line, &len, '\n', rfile)) != -1) {
+		current_pos = ftell(rfile);
 
-	while (current_pos < end_pos && (read = getdelim(&line, &len, '\n', rfile)) != -1) {
-		current_pos += read;
+		if(current_pos > end_pos) {
+			break;
+		}
 
 		// critical section
 		pthread_mutex_lock(&buf->lock);
@@ -238,12 +232,34 @@ int main (int argc, char *argv[])
 
 		// 파일 세그먼트의 마지막 문장이면 어떻게 처리할지 고민하기
 		prod_arg[i].file = fopen(argv[1], "r");
+		//printf("File pointer: %x", (unsigned int)prod_arg[i].file);
 		prod_arg[i].start_pos = i * f_segment_size;
 		if (i == Nprod - 1) {
 			prod_arg[i].end_pos = file_size;
 		} else {
 			prod_arg[i].end_pos = (i + 1) * f_segment_size;
 		}
+
+		if(prod_arg[i].start_pos != 0) {
+			fseek(prod_arg[i].file, prod_arg[i].start_pos - 1, SEEK_SET);
+			int c = fgetc(prod_arg[i].file);
+			while(c != '\n' && c != EOF) {
+				c = fgetc(prod_arg[i].file);
+				prod_arg[i].start_pos = ftell(prod_arg[i].file);
+			}
+		} else {
+			fseek(prod_arg[i].file, prod_arg[i].start_pos, SEEK_SET);
+		}
+
+		if(prod_arg[i].end_pos != file_size) {
+			fseek(prod_arg[i].file, prod_arg[i].end_pos, SEEK_SET);
+			int c = fgetc(prod_arg[i].file);
+			while(c != '\n' && c != EOF) {
+				c = fgetc(prod_arg[i].file);
+				prod_arg[i].end_pos = ftell(prod_arg[i].file);
+			}
+		}
+
 		prod_arg[i].buffer = &bufv[i];
 	}
 
