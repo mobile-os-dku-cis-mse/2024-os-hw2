@@ -145,9 +145,9 @@ void *producer(void *arg) {
 void *consumer(void *arg) {
 	buffer* buf = (buffer*) arg;
 	int i = 0;
-	char *line = NULL;
 
 	while(1) {
+		char *line = NULL;
 		pthread_mutex_lock(&buf->lock);
 
 		while(!buf->full && !buf->eof) {
@@ -165,11 +165,9 @@ void *consumer(void *arg) {
 			get_char_stat_from_line(line);
 			free(line);
 			i++;
-		} else if(buf->eof) {
-			pthread_mutex_unlock(&buf->lock);
-			break;
 		} else {
 			pthread_mutex_unlock(&buf->lock);
+			break;
 		}
 	}
 	printf("Cons_%x: %d lines\n", (unsigned int)pthread_self(), i);
@@ -281,10 +279,12 @@ int main (int argc, char *argv[])
 	for (i = 0 ; i < Ncons ; i++) {
 		rc = pthread_join(cons[i], (void **) &ret);
 		printf("main: consumer_%d joined with %d\n", i, *ret);
+		free(ret);
 	}
 	for (i = 0 ; i < Nprod ; i++) {
 		rc = pthread_join(prod[i], (void **) &ret);
 		printf("main: producer_%d joined with %d\n", i, *ret);
+		free(ret);
 	}
 
 	clock_gettime(CLOCK_MONOTONIC, &end);
