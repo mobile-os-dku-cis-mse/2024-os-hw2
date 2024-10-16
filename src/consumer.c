@@ -20,9 +20,8 @@ void *consumer(void *arg)
 
 	while (1) {
 		pthread_mutex_lock(&so->lock);
-		while (so->count == 0 && !so->done) {
+		while (so->count == 0 && !so->done)
 			pthread_cond_wait(&so->not_empty, &so->lock);
-		}
 		if (so->count == 0 && so->done) {
 			pthread_mutex_unlock(&so->lock);
 			break;

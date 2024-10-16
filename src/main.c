@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
 	rfile = fopen(argv[1], "r");
 	if (rfile == NULL) {
 		perror("rfile");
-		return(1);
+		return 1;
 	}
 	so_t *share = init_shared_object(rfile);
 	create_threads(prod, cons, Nprod, Ncons, share);
