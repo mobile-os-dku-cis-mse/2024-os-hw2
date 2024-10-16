@@ -5,9 +5,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+
+#include "shared_queue.h"
 #define BILLION 1000000000L
 #define MAX_STRING_LENGTH 30
 #define ASCII_SIZE	256
+
+// 단일 버퍼의 한계점은 버퍼를 한 번 채우면
+// 자신이 가지고 있는 CPU 타임을 전부 버리고 문맥 교환을 수행해야 한다는 점임
 
 // 공유 버퍼의 개수는 생산자에 맞추기
 typedef struct {
@@ -24,7 +29,7 @@ typedef struct {
 	FILE* file;
 	long start_pos;
 	long end_pos;
-	buffer* buffer;
+	shared_queue_t* queue;
 }producer_arg;
 
 typedef struct res_arr {
@@ -89,7 +94,7 @@ void get_char_stat_from_line(char* line) {
 
 void *producer(void *arg) {
 	producer_arg* prod_arg = (producer_arg*)arg;
-	buffer *buf = prod_arg->buffer;
+	shared_queue_t *queue = prod_arg->queue;
 	FILE *rfile = prod_arg->file;
 	long start_pos = prod_arg->start_pos;
 	long end_pos = prod_arg->end_pos;
@@ -109,19 +114,7 @@ void *producer(void *arg) {
 			break;
 		}
 
-		// start of critical section
-		pthread_mutex_lock(&buf->lock);
-
-		while(buf->full == 1) {
-			pthread_cond_wait(&buf->cond_empty, &buf->lock);
-		}
-
-		buf->line = line;
-		buf->full = 1;
-
-		pthread_cond_signal(&buf->cond_full);
-		pthread_mutex_unlock(&buf->lock);
-		// end of critical section
+		enqueue(queue, line);
 
 		line = NULL;
 		len = 0;
@@ -129,10 +122,10 @@ void *producer(void *arg) {
 		//printf("Prod_%x: [%d] %s", (unsigned int)pthread_self(), i, buf->line);
 	}
 
-	pthread_mutex_lock(&buf->lock);
-	buf->eof = 1;
-	pthread_cond_signal(&buf->cond_full);
-	pthread_mutex_unlock(&buf->lock);
+	pthread_mutex_lock(&queue->lock);
+	queue->eof = 1;
+	pthread_cond_signal(&queue->not_empty);
+	pthread_mutex_unlock(&queue->lock);
 
 	printf("Prod_%x: %d lines\n", (unsigned int)pthread_self(), i);
 	fclose(rfile);
@@ -143,32 +136,18 @@ void *producer(void *arg) {
 }
 
 void *consumer(void *arg) {
-	buffer* buf = (buffer*) arg;
+	shared_queue_t *queue = (shared_queue_t *)arg;
 	int i = 0;
 
 	while(1) {
-		char *line = NULL;
-		pthread_mutex_lock(&buf->lock);
-
-		while(!buf->full && !buf->eof) {
-			pthread_cond_wait(&buf->cond_full, &buf->lock);
-		}
-
-		if (buf->full) {
-			line = buf->line;
-			buf->line = NULL;
-			buf->full = 0;
-			//printf("Cons_[%d]: %s", i, line);
-			pthread_cond_signal(&buf->cond_empty);
-			pthread_mutex_unlock(&buf->lock);
-
-			get_char_stat_from_line(line);
-			free(line);
-			i++;
-		} else {
-			pthread_mutex_unlock(&buf->lock);
+		char *line = dequeue(queue);
+		if(line == NULL) {
 			break;
 		}
+
+		get_char_stat_from_line(line);
+		free(line);
+		i++;
 	}
 	printf("Cons_%x: %d lines\n", (unsigned int)pthread_self(), i);
 	int* ret = (int *)malloc(sizeof(int));
@@ -211,7 +190,7 @@ int main (int argc, char *argv[])
 	res_arr_init();
 
 	// buffer & producer argument initialize
-	buffer* bufv = calloc(Nprod, sizeof(buffer));
+	shared_queue_t* queue_v = calloc(Nprod, sizeof(shared_queue_t));
 	producer_arg* prod_arg = calloc(Nprod, sizeof(producer_arg));
 
 	fseek(rfile, 0, SEEK_END);
@@ -220,15 +199,8 @@ int main (int argc, char *argv[])
 	fseek(rfile, 0, SEEK_SET);
 
 	for(int i = 0; i < Nprod; i++) {
-		bufv[i].line = NULL;
-		bufv[i].size = 0;
-		pthread_mutex_init(&bufv[i].lock, NULL);
-		pthread_cond_init(&bufv[i].cond_full, NULL);
-		pthread_cond_init(&bufv[i].cond_empty, NULL);
-		bufv[i].full = 0;
-		bufv[i].eof = 0;
+		shared_queue_init(&queue_v[i]);
 
-		// 파일 세그먼트의 마지막 문장이면 어떻게 처리할지 고민하기
 		prod_arg[i].file = fopen(argv[1], "r");
 		//printf("File pointer: %x", (unsigned int)prod_arg[i].file);
 		prod_arg[i].start_pos = i * f_segment_size;
@@ -258,7 +230,7 @@ int main (int argc, char *argv[])
 			}
 		}
 
-		prod_arg[i].buffer = &bufv[i];
+		prod_arg[i].queue = &queue_v[i];
 	}
 
 
@@ -273,7 +245,7 @@ int main (int argc, char *argv[])
 		pthread_create(&prod[i], NULL, producer, &prod_arg[i]);
 	for (i = 0 ; i < Ncons ; i++)
 		// 왜 bufv가?
-		pthread_create(&cons[i], NULL, consumer, &bufv[i]);
+		pthread_create(&cons[i], NULL, consumer, &queue_v[i]);
 	printf("main continuing\n");
 	int rc;
 	for (i = 0 ; i < Ncons ; i++) {
@@ -295,16 +267,9 @@ int main (int argc, char *argv[])
 	printf("Running Threads for %llu ns (%.9f sec)\n", (long long unsigned int) diff, (double) diff / BILLION);
 
 	for(int i = 0; i < Nprod; i++) {
-		pthread_mutex_destroy(&bufv[i].lock);
-		pthread_cond_destroy(&bufv[i].cond_full);
-		pthread_cond_destroy(&bufv[i].cond_empty);
-		if(bufv[i].line != NULL) {
-			// 이중 Free 주의
-		}
-		// 이중 Close
-		//fclose(prod_arg[i].file);
+		shared_queue_destroy(&queue_v[i]);
 	}
-	free(bufv);
+	free(queue_v);
 	free(prod_arg);
 
 	pthread_exit(NULL);
