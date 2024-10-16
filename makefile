@@ -1,8 +1,11 @@
 SRC =
 
 SRC_MAIN =	main.c \
-			producers.c \
-			words_array.c \
+			producer.c \
+			consumer.c \
+			threads.c \
+			parser.c \
+			shared_object.c \
 
 SRC_TEST =
 
