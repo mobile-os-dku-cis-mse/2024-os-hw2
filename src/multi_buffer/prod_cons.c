@@ -15,7 +15,7 @@ typedef struct {
 	size_t size;
 	pthread_mutex_t lock;
 	pthread_cond_t cond_full;
-	pthread_cond_t cond_consumer;
+	pthread_cond_t cond_empty;
 	int full;
 	int eof;
 } buffer;
@@ -115,10 +115,11 @@ void *producer(void *arg) {
 	while (current_pos < end_pos && (read = getdelim(&line, &len, '\n', rfile)) != -1) {
 		current_pos += read;
 
+		// critical section
 		pthread_mutex_lock(&buf->lock);
 
 		while(buf->full == 1) {
-			pthread_cond_wait(&buf->cond_consumer, &buf->lock);
+			pthread_cond_wait(&buf->cond_empty, &buf->lock);
 		}
 
 		buf->line = strdup(line);
@@ -131,11 +132,12 @@ void *producer(void *arg) {
 		line = NULL;
 		len = 0;
 		i++;
+		printf("Prod_%x: [%d] %s", (unsigned int)pthread_self(), i, buf->line);
 	}
 
-	pthread_mutex_unlock(&buf->lock);
+	pthread_mutex_lock(&buf->lock);
 	buf->eof = 1;
-	pthread_cond_signal(&buf->cond_consumer);
+	pthread_cond_signal(&buf->cond_full);
 	pthread_mutex_unlock(&buf->lock);
 
 	printf("Prod_%x: %d lines\n", (unsigned int)pthread_self(), i);
@@ -162,8 +164,8 @@ void *consumer(void *arg) {
 			line = buf->line;
 			buf->line = NULL;
 			buf->full = 0;
-			printf("[%d]%s", i, line);
-			pthread_cond_signal(&buf->cond_full);
+			printf("Cons_[%d]: %s", i, line);
+			pthread_cond_signal(&buf->cond_empty);
 			pthread_mutex_unlock(&buf->lock);
 
 			get_char_stat_from_line(line);
@@ -177,7 +179,9 @@ void *consumer(void *arg) {
 		}
 	}
 	printf("Cons_%x: %d lines\n", (unsigned int)pthread_self(), i);
-	pthread_exit(NULL);
+	int* ret = (int *)malloc(sizeof(int));
+	*ret = i;
+	pthread_exit(ret);
 }
 
 int main (int argc, char *argv[])
@@ -228,7 +232,7 @@ int main (int argc, char *argv[])
 		bufv[i].size = 0;
 		pthread_mutex_init(&bufv[i].lock, NULL);
 		pthread_cond_init(&bufv[i].cond_full, NULL);
-		pthread_cond_init(&bufv[i].cond_consumer, NULL);
+		pthread_cond_init(&bufv[i].cond_empty, NULL);
 		bufv[i].full = 0;
 		bufv[i].eof = 0;
 
@@ -242,6 +246,10 @@ int main (int argc, char *argv[])
 		}
 		prod_arg[i].buffer = &bufv[i];
 	}
+
+
+
+
 
 	struct timespec start, end;
 	uint64_t diff;
@@ -273,7 +281,7 @@ int main (int argc, char *argv[])
 	for(int i = 0; i < Nprod; i++) {
 		pthread_mutex_destroy(&bufv[i].lock);
 		pthread_cond_destroy(&bufv[i].cond_full);
-		pthread_cond_destroy(&bufv[i].cond_consumer);
+		pthread_cond_destroy(&bufv[i].cond_empty);
 		if(bufv[i].line != NULL) {
 			// 이중 Free 주의
 		}
@@ -285,7 +293,6 @@ int main (int argc, char *argv[])
 
 	pthread_exit(NULL);
 }
-
 
 void print_char_stat() {
 
