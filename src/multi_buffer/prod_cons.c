@@ -100,33 +100,33 @@ void *producer(void *arg) {
 	size_t len = 0;
 	ssize_t read = 0;
 	int i = 0;
-	long current_pos = start_pos;
+	long current_pos = prod_arg->start_pos;
 
 	while ((read = getdelim(&line, &len, '\n', rfile)) != -1) {
-		current_pos = ftell(rfile);
-
+		current_pos += read;
 		if(current_pos > end_pos) {
+			free(line);
 			break;
 		}
 
-		// critical section
+		// start of critical section
 		pthread_mutex_lock(&buf->lock);
 
 		while(buf->full == 1) {
 			pthread_cond_wait(&buf->cond_empty, &buf->lock);
 		}
 
-		buf->line = strdup(line);
+		buf->line = line;
 		buf->full = 1;
 
 		pthread_cond_signal(&buf->cond_full);
 		pthread_mutex_unlock(&buf->lock);
+		// end of critical section
 
-		free(line);
 		line = NULL;
 		len = 0;
 		i++;
-		printf("Prod_%x: [%d] %s", (unsigned int)pthread_self(), i, buf->line);
+		//printf("Prod_%x: [%d] %s", (unsigned int)pthread_self(), i, buf->line);
 	}
 
 	pthread_mutex_lock(&buf->lock);
@@ -158,7 +158,7 @@ void *consumer(void *arg) {
 			line = buf->line;
 			buf->line = NULL;
 			buf->full = 0;
-			printf("Cons_[%d]: %s", i, line);
+			//printf("Cons_[%d]: %s", i, line);
 			pthread_cond_signal(&buf->cond_empty);
 			pthread_mutex_unlock(&buf->lock);
 
