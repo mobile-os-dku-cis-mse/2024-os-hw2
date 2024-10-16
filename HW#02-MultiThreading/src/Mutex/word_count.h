@@ -14,6 +14,7 @@
 #define MAX_STRING_LENGTH 30
 #define ASCII_SIZE	256
 #define BUFFER_SIZE 100
+
 using namespace std;
 
 struct SharedObject {
