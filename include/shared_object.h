@@ -7,15 +7,15 @@
 
 typedef struct sharedobject {
 	FILE *rfile;
-	char *buffer[BUFFER_SIZE];   // Tampon circulaire pour stocker les lignes
-	int linenum[BUFFER_SIZE];    // Numéros de ligne correspondants
-	int in;                      // Index où le producteur écrit
-	int out;                     // Index où le consommateur lit
-	int count;                   // Nombre d'éléments dans le tampon
+	char *buffer[BUFFER_SIZE];
+	int linenum[BUFFER_SIZE];
+	int in;
+	int out;
+	int count;
 	pthread_mutex_t lock;
-	pthread_cond_t not_full;      // Condition pour vérifier si le tampon n'est pas plein
-	pthread_cond_t not_empty;     // Condition pour vérifier si le tampon n'est pas vide
-	int done;                    // Indicateur de fin des producteurs
+	pthread_cond_t not_full;
+	pthread_cond_t not_empty;
+	int done;
     size_t alpha_char_number;
 } so_t;
 

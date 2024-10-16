@@ -20,22 +20,21 @@ void *consumer(void *arg)
 
 	while (1) {
 		pthread_mutex_lock(&so->lock);
-		while (so->count == 0 && !so->done) {  // Tampon vide et production non terminée
+		while (so->count == 0 && !so->done) {
 			pthread_cond_wait(&so->not_empty, &so->lock);
 		}
-		if (so->count == 0 && so->done) {  // Si la production est terminée et qu'il n'y a plus de données
+		if (so->count == 0 && so->done) {
 			pthread_mutex_unlock(&so->lock);
 			break;
 		}
-		// Consommer une ligne depuis le tampon circulaire
 		line = so->buffer[so->out];
 		printf("Cons_%lx: [%02d:%02d] %s", (unsigned long)pthread_self(), i, so->linenum[so->out], line);
         so->alpha_char_number += number_of_alphabets_chars(line);
-		free(line);  // Libérer la ligne après consommation
+		free(line);
 		so->out = (so->out + 1) % BUFFER_SIZE;
 		so->count--;
 		i++;
-		pthread_cond_signal(&so->not_full);  // Notifier les producteurs
+		pthread_cond_signal(&so->not_full);
 		pthread_mutex_unlock(&so->lock);
 	}
 	printf("Cons: %d lines\n", i);
