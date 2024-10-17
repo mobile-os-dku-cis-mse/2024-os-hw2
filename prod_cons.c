@@ -52,7 +52,8 @@ int main (int argc, char *argv[])
     int rc, i, *ret = 0;
 
     // * Handle execution syntax error
-    if (argc == 1) {
+    if (argc == 1)
+	{
         printf("usage: ./prod_cons <readfile> #Producer #Consumer\n");
         exit(0);
     }
