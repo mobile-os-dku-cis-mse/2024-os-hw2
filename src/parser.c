@@ -1,7 +1,7 @@
 #include "shared_object.h"
 #include <stdlib.h>
 
-void parse_args(int argc, char *argv[], int *Nprod, int *Ncons)
+void parse_args(int argc, char *argv[], size_t *Nprod, size_t *Ncons)
 {
 	if (argc < 2) {
 		printf("usage: ./prod_cons <readfile> #Producer #Consumer\n");

@@ -13,19 +13,19 @@ void create_threads(pthread_t *prod, pthread_t *cons, int Nprod, int Ncons, so_t
 		pthread_create(&cons[i], NULL, consumer, share);
 }
 
-void join_threads(pthread_t *prod, pthread_t *cons, int Nprod, int Ncons)
+void join_threads(pthread_t *prod, pthread_t *cons, size_t Nprod, size_t Ncons)
 {
 	int *ret = NULL;
     size_t i = 0;
 
 	for (i = 0; i < Ncons; i++) {
 		pthread_join(cons[i], (void **) &ret);
-		printf("main: consumer_%d joined with %d\n", i, *ret);
+		printf("main: consumer_%zu joined with %d\n", i, *ret);
 		free(ret);
 	}
 	for (i = 0; i < Nprod; i++) {
 		pthread_join(prod[i], (void **) &ret);
-		printf("main: producer_%d joined with %d\n", i, *ret);
+		printf("main: producer_%zu joined with %d\n", i, *ret);
 		free(ret);
 	}
 }

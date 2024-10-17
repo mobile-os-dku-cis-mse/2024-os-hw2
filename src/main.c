@@ -4,7 +4,8 @@
 int main(int argc, char *argv[]) {
 	pthread_t prod[MAX_THREADS];
 	pthread_t cons[MAX_THREADS];
-	int Nprod, Ncons;
+	size_t Nprod = 0;
+    size_t Ncons = 0;
 	FILE *rfile;
 
 	parse_args(argc, argv, &Nprod, &Ncons);

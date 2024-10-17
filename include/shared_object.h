@@ -19,5 +19,5 @@ typedef struct sharedobject {
     size_t alpha_char_number;
 } so_t;
 
-void parse_args(int argc, char *argv[], int *Nprod, int *Ncons);
+void parse_args(int argc, char *argv[], size_t *Nprod, size_t *Ncons);
 so_t* init_shared_object(FILE *rfile);
