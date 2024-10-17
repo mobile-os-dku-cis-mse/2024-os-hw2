@@ -1,55 +1,60 @@
-# os_hw2
-HW2: Multi-threaded word count
+# os_hw1 prod_cons
+## Introduction
 
-**Due date: Oct. 19th**
+This is a multi-threaded program that reads the content of a file and then prints it to the console.\
+The program uses a number of threads determined by the user to read the file and a number of threads determined by the user to print the content to the console.\
+The program uses a buffer to store the content read from the file and to be printed to the console.
 
-The second homework is about multi-thread programming with some synchronization.
-Thread is a unit of execution; a thread has execution context, 
-    which includes the registers, stack.
-Note that address space (memory) is shared among threads in a process, 
-    so there is no clear separation and protection for memory access among threads.
+## Features
 
-The example code includes some primitive code for multiple threads usage.
-It basically tries to read a file and print it out on the screen.
-It consists of three threads: main thread for admin job 
-    second thread serves as a producer: reads lines from a file, and put the line string on the shared buffer
-    third thread serves as a consumer:  get strings from the shared buffer, and print the line out on the screen
+- The program reads the content of a file using multiple threads and stores it in a buffer.
+- The program prints the content of the buffer to the console using multiple threads.
 
-Unfortunately, the code is not working because threads runs independently from others.
-the result is that different threads access invalid memory, and have wrong value, and crash or waiting for terminated thread infinitely.
-To make it working, you have to touch the code so that the threads have correct value.
+## Build
 
-To have correct values in threads, you need to keep consistency for data touched by multiple threads.
-To keeping consistency, you should carefully control the execution among threads, which is called as synchronization.
+To build the program, run the following command:
 
-pthread_mutex_lock()/pthread_mutex_unlock are the functions for pthreads synchorinization.
-For condition variable, you may need to look up functions such as pthread_cond_wait()/pthread_cond_signal().
+```bash
+make
+```
 
-The goals from HW2 are 
+This will create an executable file called `prod_cons`.
 
-1. correct the code for prod_cons.c so that it works with 1 producer and 1 consumer
+## Run
 
-2. enhance it to support multiple consumers.
+To run the program, execute the following command:
 
-3. Make consumer(s) to gather some statistics of the given text in the file. 
-Basically, count the number of each alphabet character in the line.
-char_stat.c can be a hint for gathering statistics.
-At the end of execution, you should print out the statistics of the entire text.
-Beat the fastest execution, maximizing the concurrency!
+```bash
+./prod_cons ./sample.txt 5 5 
+```
 
-To run a program, you may give filename to read and # of producers and # of consumers.
-In case of single producer, 2 consumers, reading 'sample file'; you may need to execute your program by
-./prod_cons ./sample 1 2 
+The program takes three arguments:
+- The first argument is the path to the file to be read.
+- The second argument is the number of threads to read the file.
+- The third argument is the number of threads to print the content to the console.
 
-You can download some example input source code from the link: [https://mobile-os.dankook.ac.kr/data/FreeBSD9-orig.tar] or  
-you can use /opt/FreeBSD9-orig.tar from our server.
+## Clean
 
-Please make some document so that I can follow to build/compile and run the code.
-It would be better if the document includes some introduction and some important implementation details or your program structure.
+To clean up the build files, run the following command:
 
-htop is a program that shows threads execution in the system.
+```bash
+make clean
+```
 
-Measure & compare of execution time for different # of threads
+This will remove the object files.
 
-Happy hacking!
-Seehwan
+In order to also remove the executable file, run the following command:
+
+```bash
+make fclean
+```
+
+This will remove the object files and the executable file.
+
+To rebuild the executable file from scratch, run the following command:
+
+```bash
+make re
+```
+
+This will remove the object files and the executable file, and then rebuild the executable file.
