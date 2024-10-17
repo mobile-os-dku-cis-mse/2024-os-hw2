@@ -8,7 +8,7 @@
 #define BILLION 1000000000L
 #define MAX_STRING_LENGTH 30
 #define ASCII_SIZE	256
-
+#define READ_BUFFER_SIZE 1024
 // 공유 버퍼의 개수는 생산자에 맞추기
 typedef struct {
 	char* line;
@@ -96,18 +96,26 @@ void *producer(void *arg) {
 
 	fseek(rfile, start_pos, SEEK_SET);
 
-	char *line = NULL;
+	char buffer[READ_BUFFER_SIZE+1];
 	size_t len = 0;
 	ssize_t read = 0;
 	int i = 0;
 	long current_pos = prod_arg->start_pos;
 
-	while ((read = getdelim(&line, &len, '\n', rfile)) != -1) {
+	while ((read = fread(buffer, 1, READ_BUFFER_SIZE, rfile)) > 0) {
 		current_pos += read;
+		buffer[read] = '\0';
 		if(current_pos > end_pos) {
-			free(line);
-			break;
+			long remaining_bytes = end_pos - current_pos + read;
+
+			if (remaining_bytes > 0 && remaining_bytes <= READ_BUFFER_SIZE) {
+				buffer[remaining_bytes] = '\0';  // 남은 바이트만큼 잘라서 처리
+			} else {
+				buffer[0] = '\0';  // 남은 바이트가 없을 경우 빈 문자열 처리
+			}
 		}
+
+		char* line = strdup(buffer);
 
 		// start of critical section
 		pthread_mutex_lock(&buf->lock);
@@ -299,7 +307,7 @@ int main (int argc, char *argv[])
 		pthread_cond_destroy(&bufv[i].cond_full);
 		pthread_cond_destroy(&bufv[i].cond_empty);
 		if(bufv[i].line != NULL) {
-			// 이중 Free 주의
+			free(bufv[i].line);
 		}
 		// 이중 Close
 		//fclose(prod_arg[i].file);

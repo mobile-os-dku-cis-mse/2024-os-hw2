@@ -10,6 +10,7 @@
 #define BILLION 1000000000L
 #define MAX_STRING_LENGTH 30
 #define ASCII_SIZE	256
+#define READ_BUFFER_SIZE 1024
 
 // 단일 버퍼의 한계점은 버퍼를 한 번 채우면
 // 자신이 가지고 있는 CPU 타임을 전부 버리고 문맥 교환을 수행해야 한다는 점임
@@ -101,19 +102,21 @@ void *producer(void *arg) {
 
 	fseek(rfile, start_pos, SEEK_SET);
 
-	char *line = NULL;
+	char buffer[READ_BUFFER_SIZE + 1];
 	size_t len = 0;
 	ssize_t read = 0;
 	int i = 0;
 	long current_pos = prod_arg->start_pos;
 
-	while ((read = getdelim(&line, &len, '\n', rfile)) != -1) {
+	while ((read = fread(buffer, 1, READ_BUFFER_SIZE, rfile)) > 0) {
 		current_pos += read;
+		buffer[read] = '\0';
 		if(current_pos > end_pos) {
-			free(line);
+			buffer[end_pos - current_pos + read] = '\0';
 			break;
 		}
 
+		char* line = strdup(buffer);
 		enqueue(queue, line);
 
 		line = NULL;
