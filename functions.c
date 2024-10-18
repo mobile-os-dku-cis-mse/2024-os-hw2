@@ -69,12 +69,22 @@ void check_syntax(FILE *rfile, int *Nprod, int *Ncons, char *argv[])
 		*Nprod = atoi(argv[2]);
 		if (*Nprod > 100) *Nprod = 100;
 		if (*Nprod == 0) *Nprod = 1;
+        if (*Nprod < 0)
+        {
+            printf("Invalid number of producers\n");
+            exit(EXIT_FAILURE);
+        }
 	} else *Nprod = 1;
 	if (argv[3] != NULL)
     {
 		*Ncons = atoi(argv[3]);
 		if (*Ncons > 100) *Ncons = 100;
 		if (*Ncons == 0) *Ncons = 1;
+        if (*Ncons < 0)
+        {
+            printf("Invalid number of consumers\n");
+            exit(EXIT_FAILURE);
+        }
 	} else *Ncons = 1;
 }
 
