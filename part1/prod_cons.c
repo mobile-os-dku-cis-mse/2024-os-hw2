@@ -71,8 +71,8 @@ void *consumer(void *arg) {
 			break;
 		}
 		len = strlen(line);
-		//printf("Cons_%x: [%02d:%02d] %s",
-		//	(unsigned int)pthread_self(), i, so->linenum, line);
+		printf("Cons_%x: [%02d:%02d] %s",
+			(unsigned int)pthread_self(), i, so->linenum, line);
 		free(so->line);
 		i++;
 		so->full = 0;
