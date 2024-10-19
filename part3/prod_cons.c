@@ -3,87 +3,111 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include "sbuf.h"
+#include "stat.h"
 
 typedef struct sharedobject {
 	FILE *rfile;
-	int linenum;
-	char *line;
-	pthread_mutex_t lock;
-	// producer condition, consumer condition.
+	int rfile_end;
+	int p_cnt;
+	sbuf_queue empty_buf;
+	sbuf_queue full_buf;
 	pthread_cond_t p_cond;
 	pthread_cond_t c_cond;
-	int full;
+	pthread_mutex_t lock;
+	int res[26];
 } so_t;
 
 void *producer(void *arg) {
 	so_t *so = arg;
-	int *ret = malloc(sizeof(int));
 	FILE *rfile = so->rfile;
-	int i = 0;
 	char *line = NULL;
 	size_t len = 0;
 	ssize_t read = 0;
 
 	while (1) {
-		pthread_mutex_lock(&so->lock);
-		// because there may be multiple producers, we wait only if the buffer is 'actually' full. if the entire file has been read, the buffer will be marked as 'full', and every other producers will wait indefinitely for the lock, hence the nullity check of so->line is necessary.
-		while (so->full && so->line)
-			pthread_cond_wait(&so->p_cond, &so->lock);
+		sbuf *buf;
 
-		read = getdelim(&line, &len, '\n', rfile);
-		if (read == -1) {
-			so->full = 1;
-			so->line = NULL;
+		pthread_mutex_lock(&so->lock);
+		while (!so->rfile_end && sbuf_queue_empty(&so->empty_buf))
+			pthread_cond_wait(&so->p_cond, &so->lock);
+		if (so->rfile_end)
+		{
+			so->p_cnt--;
 			pthread_cond_broadcast(&so->c_cond);
 			pthread_mutex_unlock(&so->lock);
 			break;
 		}
+		buf = sbuf_queue_pop(&so->empty_buf);
+		pthread_mutex_unlock(&so->lock);
 
-		// here, we simply increment the line number instead of assigning 'i' to it. the arbitrary context switching between multiple threads makes it impossible to determine the line number by the local counter 'i'.
-		so->linenum++;
-		so->line = strdup(line);      /* share the line */
-		so->full = 1;
-		i++;
+		// end-of-file flag.
+		int flag = 0;
 
+		// read file until buffer is full or eof is reached.
+		while (1)
+		{
+			read = getdelim(&line, &len, '\n', rfile);
+
+			if (read == -1)
+			{
+				flag = 1;
+				break;
+			}
+
+			sbuf_append(buf, line);
+
+			if (sbuf_full(buf))
+				break;
+		}
+
+		pthread_mutex_lock(&so->lock);
+		if (flag)
+			so->rfile_end = flag;
+		sbuf_queue_push(&so->full_buf, buf);
 		pthread_cond_broadcast(&so->c_cond);
 		pthread_mutex_unlock(&so->lock);
 	}
+
 	free(line);
-	printf("Prod_%x: %d lines\n", (unsigned int)pthread_self(), i);
-	*ret = i;
-	pthread_exit(ret);
+	pthread_exit(NULL);
 }
 
 void *consumer(void *arg) {
+	int local_res[26] = {0};
 	so_t *so = arg;
-	int *ret = malloc(sizeof(int));
-	int i = 0;
-	int len;
-	char *line;
 
 	while (1) {
-		pthread_mutex_lock(&so->lock);
-		while (!so->full)
-			pthread_cond_wait(&so->c_cond, &so->lock);
+		sbuf *buf;
 
-		line = so->line;
-		if (line == NULL) {
-			pthread_cond_broadcast(&so->p_cond);
+		pthread_mutex_lock(&so->lock);
+		while (sbuf_queue_empty(&so->full_buf) && so->p_cnt)
+			pthread_cond_wait(&so->c_cond, &so->lock);
+		if (sbuf_queue_empty(&so->full_buf) && !so->p_cnt)
+		{
 			pthread_mutex_unlock(&so->lock);
 			break;
 		}
-		len = strlen(line);
-		printf("Cons_%x: [%02d:%02d] %s",
-			(unsigned int)pthread_self(), i, so->linenum, line);
-		free(so->line);
-		i++;
-		so->full = 0;
+		buf = sbuf_queue_pop(&so->full_buf);
+		pthread_mutex_unlock(&so->lock);
+
+		for (int i = 0; i < buf->sz; i++)
+			alph_cnt(buf->mem[i], local_res);
+		sbuf_clear(buf);
+
+		pthread_mutex_lock(&so->lock);
+		sbuf_queue_push(&so->empty_buf, buf);
 		pthread_cond_broadcast(&so->p_cond);
 		pthread_mutex_unlock(&so->lock);
 	}
-	printf("Cons_%x: %d lines\n", (unsigned int)pthread_self(), i);
-	*ret = i;
-	pthread_exit(ret);
+
+	// accumulate the locally calculated statistics.
+	pthread_mutex_lock(&so->lock);
+	for (int i = 0; i < 26; i++)
+		so->res[i] += local_res[i];
+	pthread_mutex_unlock(&so->lock);
+
+	pthread_exit(NULL);
 }
 
 
@@ -102,8 +126,6 @@ int main (int argc, char *argv[])
 	}
 	so_t *share = malloc(sizeof(so_t));
 	memset(share, 0, sizeof(so_t));
-	// here, linenum is set to -1, because no line has been read yet.
-	share->linenum = -1;
 	rfile = fopen((char *) argv[1], "r");
 	if (rfile == NULL) {
 		perror("rfile");
@@ -121,24 +143,29 @@ int main (int argc, char *argv[])
 	} else Ncons = 1;
 
 	share->rfile = rfile;
-	share->line = NULL;
-	pthread_mutex_init(&share->lock, NULL);
+	share->p_cnt = Nprod;
 	pthread_cond_init(&share->p_cond, NULL);
 	pthread_cond_init(&share->c_cond, NULL);
+	pthread_mutex_init(&share->lock, NULL);
+	for (i = 0 ; i < Nprod ; i++)
+		sbuf_queue_push(&share->empty_buf, sbuf_new(1024));
+
 	for (i = 0 ; i < Nprod ; i++)
 		pthread_create(&prod[i], NULL, producer, share);
 	for (i = 0 ; i < Ncons ; i++)
 		pthread_create(&cons[i], NULL, consumer, share);
 	printf("main continuing\n");
 
-	for (i = 0 ; i < Ncons ; i++) {
+	for (i = 0 ; i < Ncons ; i++)
 		rc = pthread_join(cons[i], (void **) &ret);
-		printf("main: consumer_%d joined with %d\n", i, *ret);
-	}
-	for (i = 0 ; i < Nprod ; i++) {
+
+	for (i = 0 ; i < Nprod ; i++)
 		rc = pthread_join(prod[i], (void **) &ret);
-		printf("main: producer_%d joined with %d\n", i, *ret);
-	}
+
+	puts("char | occurrence");
+	for (int i = 0; i < 26; i++)
+		printf("%c    | %d\n", 'A'+i, share->res[i]);
+
 	pthread_exit(NULL);
 	exit(0);
 }
