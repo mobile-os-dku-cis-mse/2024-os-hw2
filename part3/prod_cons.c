@@ -164,7 +164,7 @@ int main (int argc, char *argv[])
 
 	puts("char | occurrence");
 	for (int i = 0; i < 26; i++)
-		printf("%c    | %d\n", 'A'+i, share->res[i]);
+		printf("%c(%c) | %d\n", 'A'+i, 'a'+i, share->res[i]);
 
 	pthread_exit(NULL);
 	exit(0);
