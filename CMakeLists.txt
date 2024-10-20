@@ -3,7 +3,8 @@ project(2024-os-hw1 C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(prod_cond src/single_buffer/prod_cons.c)
+add_executable(prod_cond src/single_buffer/prod_cons.c
+)
 
 add_executable(char_stat src/char_stat.c)
 

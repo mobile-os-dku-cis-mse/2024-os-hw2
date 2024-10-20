@@ -16,41 +16,27 @@ typedef struct sharedobject {
 	int full;
 } so_t;
 
-typedef struct res_arr {
-	int stat [MAX_STRING_LENGTH];
-	pthread_mutex_t stat_mutex[MAX_STRING_LENGTH];
-	int stat2 [ASCII_SIZE];
-	pthread_mutex_t stat2_mutex[ASCII_SIZE];
-}RESULT_ARR;
-
-RESULT_ARR res;
 void print_char_stat();
 
 pthread_cond_t prod_cv = PTHREAD_COND_INITIALIZER;
 pthread_cond_t cond_cv = PTHREAD_COND_INITIALIZER;
 
-void update_stat(int index, int value) {
-	pthread_mutex_lock(&res.stat_mutex[index]);
-	res.stat[index] += value;
-	pthread_mutex_unlock(&res.stat_mutex[index]);
+typedef struct {
+	int stat[MAX_STRING_LENGTH];
+	int stat2[ASCII_SIZE];
+}RES;
+
+RES res;
+
+void update_stat(int index, int value, int* local_stat) {
+	local_stat[index] += value;
 }
 
-void update_stat2(int index, int value) {
-	pthread_mutex_lock(&res.stat2_mutex[index]);
-	res.stat2[index] += value;
-	pthread_mutex_unlock(&res.stat2_mutex[index]);
+void update_stat2(int index, int value, int* local_stat2) {
+	local_stat2[index] += value;
 }
 
-void res_arr_init() {
-	for(int i = 0; i < MAX_STRING_LENGTH; i++) {
-		pthread_mutex_init(&res.stat_mutex[i], NULL);
-	}
-	for(int i = 0; i < ASCII_SIZE; i++) {
-		pthread_mutex_init(&res.stat2_mutex[i], NULL);
-	}
-}
-
-void get_char_stat_from_line(char* line) {
+void get_char_stat_from_line(char* line, int* local_stat, int* local_stat2) {
 	char* cptr = line;
 	char* substr = NULL;
 	char* brka = NULL;
@@ -63,11 +49,11 @@ void get_char_stat_from_line(char* line) {
 
 		if(length >= 30) length = 30;
 
-		update_stat(length-1, 1);// mutex_lock 필요, stat[length-1]++;
+		update_stat(length-1, 1, local_stat);// mutex_lock 필요, stat[length-1]++;
 
 		for(int i = 0; i < length; i++) {
 			if(*cptr <256 && *cptr > 1)
-				update_stat2(*cptr, 1);
+				update_stat2(*cptr, 1, local_stat2);
 			cptr++;
 		}
 		cptr++;
@@ -87,19 +73,13 @@ void *producer(void *arg) {
 	while (1) {
         pthread_mutex_lock(&so->lock);
 
-		// lock waiting
 		while(so->full == 1) {
 			pthread_cond_wait(&prod_cv, &so->lock);
 		}
 
-		// read the line
 		read = getdelim(&line, &len, '\n', rfile);
-
-		// check the terminate condition
 		if (read == -1) {
 			so->eof = 1;
-			//so->full = 1;
-			//so->line = NULL;
 			pthread_cond_broadcast(&cond_cv);
 			pthread_mutex_unlock(&so->lock);
 			break;
@@ -107,7 +87,7 @@ void *producer(void *arg) {
 
 		// shared object job
 		so->linenum = i;
-		so->line = strdup(line);      /* share the line */
+		so->line = strdup(line);
 		i++;
 		so->full = 1;
 		pthread_cond_signal(&cond_cv);
@@ -120,8 +100,9 @@ void *producer(void *arg) {
 }
 
 void *consumer(void *arg) {
+	int* local_stat = calloc(MAX_STRING_LENGTH, sizeof(int));
+	int* local_stat2 = calloc(ASCII_SIZE, sizeof(int));
 	so_t *so = arg;
-	int *ret = malloc(sizeof(int));
 	int i = 0;
 	int len;
 	char *line;
@@ -139,8 +120,8 @@ void *consumer(void *arg) {
 			break;
 		}
 
-		printf("Cons_%x: [%02d:%02d] %s",
-			(unsigned int)pthread_self(), i, so->linenum, line);
+		//printf("Cons_%x: [%02d:%02d] %s",
+		//	(unsigned int)pthread_self(), i, so->linenum, line);
 		//free(so->line);
 		i++;
 		so->full = 0;
@@ -149,14 +130,26 @@ void *consumer(void *arg) {
 		pthread_cond_signal(&prod_cv);
 		pthread_mutex_unlock(&so->lock);
 
-		get_char_stat_from_line(line);
+		get_char_stat_from_line(line, local_stat, local_stat2);
 		free(line);
 	}
 	printf("Cons: %d lines\n", i);
-	*ret = i;
-	pthread_exit(ret);
+	void** ptr = malloc(sizeof(int*));
+	ptr[0] = local_stat;
+	ptr[1] = local_stat2;
+	pthread_exit((void*)ptr);
 }
 
+void merge_result(void** ptr, int ncons) {
+	for(int i = 0; i < ncons; i++) {
+		for(int j = 0; j < MAX_STRING_LENGTH; j++) {
+			res.stat[j] = ((int***)ptr)[i][0][j];
+		}
+		for(int j = 0; j < ASCII_SIZE; j++) {
+			res.stat2[j] = ((int***)ptr)[i][1][j];
+		}
+	}
+}
 
 int main (int argc, char *argv[])
 {
@@ -210,15 +203,20 @@ int main (int argc, char *argv[])
 	for (i = 0 ; i < Ncons ; i++)
 		pthread_create(&cons[i], NULL, consumer, share);
 	printf("main continuing\n");
-
+	void*** ptr = malloc(sizeof(void**) * Ncons);
+	void** ptr_holder;
 	for (i = 0 ; i < Ncons ; i++) {
-		rc = pthread_join(cons[i], (void **) &ret);
-		printf("main: consumer_%d joined with %d\n", i, *ret);
+		rc = pthread_join(cons[i], (void **) &ptr_holder);
+		ptr[i] = ptr_holder;
+		printf("main: consumer_%d joined\n", i);
 	}
+
 	for (i = 0 ; i < Nprod ; i++) {
 		rc = pthread_join(prod[i], (void **) &ret);
 		printf("main: producer_%d joined with %d\n", i, *ret);
 	}
+
+	merge_result(ptr, Ncons);
 
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
