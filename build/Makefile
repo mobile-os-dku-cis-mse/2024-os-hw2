@@ -168,19 +168,6 @@ single_shared_queue/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/single_shared_queue.dir/build.make CMakeFiles/single_shared_queue.dir/build
 .PHONY : single_shared_queue/fast
 
-#=============================================================================
-# Target rules for targets named others
-
-# Build rule for target.
-others: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 others
-.PHONY : others
-
-# fast build rule for target.
-others/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/others.dir/build.make CMakeFiles/others.dir/build
-.PHONY : others/fast
-
 src/char_stat.o: src/char_stat.c.o
 .PHONY : src/char_stat.o
 
@@ -325,30 +312,6 @@ src/single_shared_queue/shared_queue.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/single_shared_queue.dir/build.make CMakeFiles/single_shared_queue.dir/src/single_shared_queue/shared_queue.c.s
 .PHONY : src/single_shared_queue/shared_queue.c.s
 
-src/temp.o: src/temp.c.o
-.PHONY : src/temp.o
-
-# target to build an object file
-src/temp.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/others.dir/build.make CMakeFiles/others.dir/src/temp.c.o
-.PHONY : src/temp.c.o
-
-src/temp.i: src/temp.c.i
-.PHONY : src/temp.i
-
-# target to preprocess a source file
-src/temp.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/others.dir/build.make CMakeFiles/others.dir/src/temp.c.i
-.PHONY : src/temp.c.i
-
-src/temp.s: src/temp.c.s
-.PHONY : src/temp.s
-
-# target to generate assembly for a file
-src/temp.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/others.dir/build.make CMakeFiles/others.dir/src/temp.c.s
-.PHONY : src/temp.c.s
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -358,7 +321,6 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... char_stat"
-	@echo "... others"
 	@echo "... prod_cond"
 	@echo "... shared_queue"
 	@echo "... single_shared_queue"
@@ -380,9 +342,6 @@ help:
 	@echo "... src/single_shared_queue/shared_queue.o"
 	@echo "... src/single_shared_queue/shared_queue.i"
 	@echo "... src/single_shared_queue/shared_queue.s"
-	@echo "... src/temp.o"
-	@echo "... src/temp.i"
-	@echo "... src/temp.s"
 .PHONY : help
 
 

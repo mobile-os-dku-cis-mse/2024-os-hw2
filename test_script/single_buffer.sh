@@ -9,7 +9,7 @@ OUTPUT_FILE="single_buffer_results.csv"
 
 echo "Producers,Consumers,Real,User,Sys" > $OUTPUT_FILE
 
-for i in {4..100}; do
+for i in {1..100}; do
         echo "Running test with Producers=$i Consumers=$i"
         
         RESULT=$( { time ($PROGRAM $INPUT_FILE $i $i ); }  )

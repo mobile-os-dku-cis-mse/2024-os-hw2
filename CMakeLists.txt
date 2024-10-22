@@ -18,4 +18,3 @@ add_executable(single_shared_queue
         src/single_shared_queue/shared_queue.c
 )
 
-add_executable(others src/temp.c)

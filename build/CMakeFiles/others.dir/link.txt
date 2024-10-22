@@ -1,1 +1,0 @@
-/usr/bin/cc CMakeFiles/others.dir/src/temp.c.o -o others 

@@ -26,7 +26,6 @@ void enqueue(shared_queue_t *queue, char *data) {
     pthread_mutex_lock(&queue->lock);
 
     if (queue->tail == NULL) {
-        // 큐가 비어있는 경우
         queue->head = new_node;
         queue->tail = new_node;
     } else {
@@ -47,7 +46,6 @@ char *dequeue(shared_queue_t *queue) {
     }
 
     if (queue->head == NULL && queue->eof > 0) {
-        // 모든 생산자가 EOF에 도달했고, 큐가 비어있음
         pthread_mutex_unlock(&queue->lock);
         return NULL;
     }

@@ -2,6 +2,5 @@
 /home/hochacha/repos/2024-os-hw2/build/CMakeFiles/char_stat.dir
 /home/hochacha/repos/2024-os-hw2/build/CMakeFiles/shared_queue.dir
 /home/hochacha/repos/2024-os-hw2/build/CMakeFiles/single_shared_queue.dir
-/home/hochacha/repos/2024-os-hw2/build/CMakeFiles/others.dir
 /home/hochacha/repos/2024-os-hw2/build/CMakeFiles/edit_cache.dir
 /home/hochacha/repos/2024-os-hw2/build/CMakeFiles/rebuild_cache.dir

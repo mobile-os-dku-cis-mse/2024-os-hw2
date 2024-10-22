@@ -67,7 +67,6 @@ all: CMakeFiles/prod_cond.dir/all
 all: CMakeFiles/char_stat.dir/all
 all: CMakeFiles/shared_queue.dir/all
 all: CMakeFiles/single_shared_queue.dir/all
-all: CMakeFiles/others.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -79,7 +78,6 @@ clean: CMakeFiles/prod_cond.dir/clean
 clean: CMakeFiles/char_stat.dir/clean
 clean: CMakeFiles/shared_queue.dir/clean
 clean: CMakeFiles/single_shared_queue.dir/clean
-clean: CMakeFiles/others.dir/clean
 .PHONY : clean
 
 #=============================================================================
@@ -89,7 +87,7 @@ clean: CMakeFiles/others.dir/clean
 CMakeFiles/prod_cond.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/prod_cond.dir/build.make CMakeFiles/prod_cond.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/prod_cond.dir/build.make CMakeFiles/prod_cond.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/hochacha/repos/2024-os-hw2/build/CMakeFiles --progress-num=5,6 "Built target prod_cond"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/hochacha/repos/2024-os-hw2/build/CMakeFiles --progress-num=3,4 "Built target prod_cond"
 .PHONY : CMakeFiles/prod_cond.dir/all
 
 # Build rule for subdir invocation for target.
@@ -141,7 +139,7 @@ CMakeFiles/char_stat.dir/clean:
 CMakeFiles/shared_queue.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/shared_queue.dir/build.make CMakeFiles/shared_queue.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/shared_queue.dir/build.make CMakeFiles/shared_queue.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/hochacha/repos/2024-os-hw2/build/CMakeFiles --progress-num=7,8,9 "Built target shared_queue"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/hochacha/repos/2024-os-hw2/build/CMakeFiles --progress-num=5,6,7 "Built target shared_queue"
 .PHONY : CMakeFiles/shared_queue.dir/all
 
 # Build rule for subdir invocation for target.
@@ -167,7 +165,7 @@ CMakeFiles/shared_queue.dir/clean:
 CMakeFiles/single_shared_queue.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/single_shared_queue.dir/build.make CMakeFiles/single_shared_queue.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/single_shared_queue.dir/build.make CMakeFiles/single_shared_queue.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/hochacha/repos/2024-os-hw2/build/CMakeFiles --progress-num=10,11,12 "Built target single_shared_queue"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/hochacha/repos/2024-os-hw2/build/CMakeFiles --progress-num=8,9,10 "Built target single_shared_queue"
 .PHONY : CMakeFiles/single_shared_queue.dir/all
 
 # Build rule for subdir invocation for target.
@@ -185,32 +183,6 @@ single_shared_queue: CMakeFiles/single_shared_queue.dir/rule
 CMakeFiles/single_shared_queue.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/single_shared_queue.dir/build.make CMakeFiles/single_shared_queue.dir/clean
 .PHONY : CMakeFiles/single_shared_queue.dir/clean
-
-#=============================================================================
-# Target rules for target CMakeFiles/others.dir
-
-# All Build rule for target.
-CMakeFiles/others.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/others.dir/build.make CMakeFiles/others.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/others.dir/build.make CMakeFiles/others.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/hochacha/repos/2024-os-hw2/build/CMakeFiles --progress-num=3,4 "Built target others"
-.PHONY : CMakeFiles/others.dir/all
-
-# Build rule for subdir invocation for target.
-CMakeFiles/others.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/hochacha/repos/2024-os-hw2/build/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/others.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/hochacha/repos/2024-os-hw2/build/CMakeFiles 0
-.PHONY : CMakeFiles/others.dir/rule
-
-# Convenience name for target.
-others: CMakeFiles/others.dir/rule
-.PHONY : others
-
-# clean rule for target.
-CMakeFiles/others.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/others.dir/build.make CMakeFiles/others.dir/clean
-.PHONY : CMakeFiles/others.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.
