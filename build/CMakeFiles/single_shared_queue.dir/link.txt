@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/single_shared_queue.dir/src/single_shared_queue/prod_cons.c.o CMakeFiles/single_shared_queue.dir/src/single_shared_queue/shared_queue.c.o -o single_shared_queue 

@@ -13,8 +13,6 @@ add_executable(shared_queue
         src/multi_shared_queue/prod_cons.c
 )
 
-add_executable(multi_buffer_prod_cons src/multi_buffer/prod_cons.c)
-
 add_executable(single_shared_queue
         src/single_shared_queue/prod_cons.c
         src/single_shared_queue/shared_queue.c

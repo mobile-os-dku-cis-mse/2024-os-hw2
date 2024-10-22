@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/prod_cond.dir/src/single_buffer/prod_cons.c.o -o prod_cond 

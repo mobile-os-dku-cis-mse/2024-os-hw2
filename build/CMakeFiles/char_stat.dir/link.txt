@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/char_stat.dir/src/char_stat.c.o -o char_stat 
