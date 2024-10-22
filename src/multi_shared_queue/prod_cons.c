@@ -35,9 +35,7 @@ typedef struct {
 
 typedef struct res_arr {
 	int stat [MAX_STRING_LENGTH];
-	pthread_mutex_t stat_mutex[MAX_STRING_LENGTH];
 	int stat2 [ASCII_SIZE];
-	pthread_mutex_t stat2_mutex[ASCII_SIZE];
 }RESULT_ARR;
 
 RESULT_ARR res;
@@ -46,30 +44,15 @@ void print_char_stat();
 pthread_cond_t prod_cv = PTHREAD_COND_INITIALIZER;
 pthread_cond_t cond_cv = PTHREAD_COND_INITIALIZER;
 
-void update_stat(int index, int value) {
-	pthread_mutex_lock(&res.stat_mutex[index]);
-	res.stat[index] += value;
-	pthread_mutex_unlock(&res.stat_mutex[index]);
+void update_stat(int index, int value, int* local_stat) {
+	local_stat[index] += value;
 }
 
-void update_stat2(int index, int value) {
-	pthread_mutex_lock(&res.stat2_mutex[index]);
-	res.stat2[index] += value;
-	pthread_mutex_unlock(&res.stat2_mutex[index]);
+void update_stat2(int index, int value, int* local_stat2) {
+	local_stat2[index] += value;
 }
 
-void res_arr_init() {
-	for(int i = 0; i < MAX_STRING_LENGTH; i++) {
-		pthread_mutex_init(&res.stat_mutex[i], NULL);
-		//res.stat[i] = 0;
-	}
-	for(int i = 0; i < ASCII_SIZE; i++) {
-		pthread_mutex_init(&res.stat2_mutex[i], NULL);
-		//res.stat2[i] = 0;
-	}
-}
-
-void get_char_stat_from_line(char* line) {
+void get_char_stat_from_line(char* line, int* local_stat, int* local_stat2) {
 	char* cptr = line;
 	char* substr = NULL;
 	char* brka = NULL;
@@ -81,11 +64,11 @@ void get_char_stat_from_line(char* line) {
 		length = strlen(substr);
 		if(length >= 30) length = 30;
 
-		update_stat(length-1, 1);// mutex_lock 필요, stat[length-1]++;
+		update_stat(length-1, 1, local_stat);// mutex_lock 필요, stat[length-1]++;
 
 		for(int i = 0; i < length; i++) {
 			if(*cptr <256 && *cptr > 1)
-				update_stat2(*cptr, 1);
+				update_stat2(*cptr, 1, local_stat2);
 			cptr++;
 		}
 		cptr++;
@@ -102,22 +85,20 @@ void *producer(void *arg) {
 
 	fseek(rfile, start_pos, SEEK_SET);
 
-	char buffer[READ_BUFFER_SIZE + 1];
+	char* line = NULL;
 	size_t len = 0;
 	ssize_t read = 0;
 	int i = 0;
 	long current_pos = prod_arg->start_pos;
 
-	while ((read = fread(buffer, 1, READ_BUFFER_SIZE, rfile)) > 0) {
-		current_pos += read;
-		buffer[read] = '\0';
-		if(current_pos > end_pos) {
-			buffer[end_pos - current_pos + read] = '\0';
+	while ((read = getdelim(&line, &len, '\n', rfile)) > 0) {
+		current_pos = ftell(rfile);
+		enqueue(queue, line);
+		if(current_pos >= end_pos) {
 			break;
 		}
 
-		char* line = strdup(buffer);
-		enqueue(queue, line);
+
 
 		line = NULL;
 		len = 0;
@@ -140,6 +121,8 @@ void *producer(void *arg) {
 
 void *consumer(void *arg) {
 	shared_queue_t *queue = (shared_queue_t *)arg;
+	int* local_stat = calloc(MAX_STRING_LENGTH, sizeof(int));
+	int* local_stat2 = calloc(ASCII_SIZE, sizeof(int));
 	int i = 0;
 
 	while(1) {
@@ -148,14 +131,26 @@ void *consumer(void *arg) {
 			break;
 		}
 
-		get_char_stat_from_line(line);
+		get_char_stat_from_line(line, local_stat, local_stat2);
 		free(line);
 		i++;
 	}
 	printf("Cons_%x: %d lines\n", (unsigned int)pthread_self(), i);
-	int* ret = (int *)malloc(sizeof(int));
-	*ret = i;
-	pthread_exit(ret);
+	void** ptr = malloc(sizeof(int*));
+	ptr[0] = local_stat;
+	ptr[1] = local_stat2;
+	pthread_exit((void*)ptr);
+}
+
+void merge_result(void*** ptr, int ncons) {
+	for(int i = 0; i < ncons; i++) {
+		for(int j = 0; j < MAX_STRING_LENGTH; j++) {
+			res.stat[j] += ((int***)ptr)[i][0][j];
+		}
+		for(int j = 0; j < ASCII_SIZE; j++) {
+			res.stat2[j] += ((int***)ptr)[i][1][j];
+		}
+	}
 }
 
 int main (int argc, char *argv[])
@@ -189,9 +184,6 @@ int main (int argc, char *argv[])
 		if (Ncons == 0) Ncons = 1;
 	} else Ncons = 1;
 
-	// result stat array initialize
-	res_arr_init();
-
 	// buffer & producer argument initialize
 	shared_queue_t* queue_v = calloc(Nprod, sizeof(shared_queue_t));
 	producer_arg* prod_arg = calloc(Nprod, sizeof(producer_arg));
@@ -205,40 +197,36 @@ int main (int argc, char *argv[])
 		shared_queue_init(&queue_v[i]);
 
 		prod_arg[i].file = fopen(argv[1], "r");
-		//printf("File pointer: %x", (unsigned int)prod_arg[i].file);
+
+		// 시작 위치 설정
 		prod_arg[i].start_pos = i * f_segment_size;
+		if (i != 0) {  // 첫 번째 프로듀서가 아닌 경우에만 경계 조정
+			fseek(prod_arg[i].file, prod_arg[i].start_pos - 1, SEEK_SET);
+			int c;
+			// 이전 위치에서 '\n'을 만날 때까지 포인터 이동
+			while ((c = fgetc(prod_arg[i].file)) != '\n' && c != EOF) {
+				prod_arg[i].start_pos = ftell(prod_arg[i].file);
+			}
+			// 다음 줄의 첫 번째 문자로 이동
+			prod_arg[i].start_pos = ftell(prod_arg[i].file);
+		}
+
+		// 끝 위치 설정
 		if (i == Nprod - 1) {
+			// 마지막 프로듀서는 파일 끝까지 읽음
 			prod_arg[i].end_pos = file_size;
 		} else {
 			prod_arg[i].end_pos = (i + 1) * f_segment_size;
-		}
-
-		if(prod_arg[i].start_pos != 0) {
-			fseek(prod_arg[i].file, prod_arg[i].start_pos - 1, SEEK_SET);
-			int c = fgetc(prod_arg[i].file);
-			while(c != '\n' && c != EOF) {
-				c = fgetc(prod_arg[i].file);
-				prod_arg[i].start_pos = ftell(prod_arg[i].file);
-			}
-		} else {
-			fseek(prod_arg[i].file, prod_arg[i].start_pos, SEEK_SET);
-		}
-
-		if(prod_arg[i].end_pos != file_size) {
 			fseek(prod_arg[i].file, prod_arg[i].end_pos, SEEK_SET);
-			int c = fgetc(prod_arg[i].file);
-			while(c != '\n' && c != EOF) {
-				c = fgetc(prod_arg[i].file);
+			int c;
+			// 다음 '\n'을 만날 때까지 포인터 이동
+			while ((c = fgetc(prod_arg[i].file)) != '\n' && c != EOF) {
 				prod_arg[i].end_pos = ftell(prod_arg[i].file);
 			}
 		}
 
 		prod_arg[i].queue = &queue_v[i];
 	}
-
-
-
-
 
 	struct timespec start, end;
 	uint64_t diff;
@@ -250,11 +238,15 @@ int main (int argc, char *argv[])
 		// 왜 bufv가?
 		pthread_create(&cons[i], NULL, consumer, &queue_v[i]);
 	printf("main continuing\n");
+
 	int rc;
+	void*** ptr = malloc(sizeof(void**) * Ncons);
+	void** ptr_holder;
+
 	for (i = 0 ; i < Ncons ; i++) {
-		rc = pthread_join(cons[i], (void **) &ret);
-		printf("main: consumer_%d joined with %d\n", i, *ret);
-		free(ret);
+		rc = pthread_join(cons[i], (void **) &ptr_holder);
+		ptr[i] = ptr_holder;
+		printf("main: consumer_%d joined\n", i);
 	}
 	for (i = 0 ; i < Nprod ; i++) {
 		rc = pthread_join(prod[i], (void **) &ret);
@@ -264,6 +256,7 @@ int main (int argc, char *argv[])
 
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
+	merge_result(ptr, Ncons);
 	print_char_stat();
 
 	diff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
@@ -291,7 +284,8 @@ void print_char_stat() {
 	printf("  #ch  freq \n");
 	for (int i = 0 ; i < 30 ; i++) {
 		int j = 0;
-		int num_star = res.stat[i]*80/sum;
+
+		int num_star = sum ? res.stat[i]*80/sum : 0;
 		printf("[%3d]: %4d \t", i+1, res.stat[i]);
 		for (j = 0 ; j < num_star ; j++)
 			printf("*");

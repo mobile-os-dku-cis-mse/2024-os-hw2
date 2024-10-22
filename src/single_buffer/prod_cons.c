@@ -73,13 +73,15 @@ void *producer(void *arg) {
 	while (1) {
         pthread_mutex_lock(&so->lock);
 
-		while(so->full == 1) {
+		while(so->full == 1 && so->line) {
 			pthread_cond_wait(&prod_cv, &so->lock);
 		}
 
 		read = getdelim(&line, &len, '\n', rfile);
 		if (read == -1) {
+			so->full = 1;
 			so->eof = 1;
+			so->line = NULL;
 			pthread_cond_broadcast(&cond_cv);
 			pthread_mutex_unlock(&so->lock);
 			break;
@@ -90,7 +92,7 @@ void *producer(void *arg) {
 		so->line = strdup(line);
 		i++;
 		so->full = 1;
-		pthread_cond_signal(&cond_cv);
+		pthread_cond_broadcast(&cond_cv);
 		pthread_mutex_unlock(&so->lock);
 	}
 	free(line);
@@ -110,11 +112,11 @@ void *consumer(void *arg) {
 	while (1) {
 		//check the condition for mutex lock and Termination condition
 		pthread_mutex_lock(&so->lock);
-		while(so->full == 0 && so->eof == 0) {
+		while(so->full == 0) {
 			pthread_cond_wait(&cond_cv, &so->lock);
 		}
 		line = so->line;
-		if (so->full == 0 && so->eof == 1) {
+		if (so->eof) {
 			pthread_cond_broadcast(&prod_cv);
 			pthread_mutex_unlock(&so->lock);
 			break;
@@ -127,7 +129,7 @@ void *consumer(void *arg) {
 		so->full = 0;
 
 		//thread unlock
-		pthread_cond_signal(&prod_cv);
+		pthread_cond_broadcast(&prod_cv);
 		pthread_mutex_unlock(&so->lock);
 
 		get_char_stat_from_line(line, local_stat, local_stat2);
@@ -143,10 +145,10 @@ void *consumer(void *arg) {
 void merge_result(void** ptr, int ncons) {
 	for(int i = 0; i < ncons; i++) {
 		for(int j = 0; j < MAX_STRING_LENGTH; j++) {
-			res.stat[j] = ((int***)ptr)[i][0][j];
+			res.stat[j] += ((int***)ptr)[i][0][j];
 		}
 		for(int j = 0; j < ASCII_SIZE; j++) {
-			res.stat2[j] = ((int***)ptr)[i][1][j];
+			res.stat2[j] += ((int***)ptr)[i][1][j];
 		}
 	}
 }
@@ -167,9 +169,6 @@ int main (int argc, char *argv[])
 		exit (0);
 	}
 
-	so_t *share = malloc(sizeof(so_t));
-	memset(share, 0, sizeof(so_t));
-
 
 
 	rfile = fopen((char *) argv[1], "r");
@@ -188,9 +187,11 @@ int main (int argc, char *argv[])
 		if (Ncons == 0) Ncons = 1;
 	} else Ncons = 1;
 
+	so_t *share = malloc(sizeof(so_t));
+	memset(share, 0, sizeof(so_t));
+
 	share->rfile = rfile;
 	share->line = NULL;
-
 
 
 	struct timespec start, end;
