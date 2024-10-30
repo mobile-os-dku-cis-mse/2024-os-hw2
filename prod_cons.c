@@ -8,7 +8,7 @@ typedef struct sharedobject {
 	FILE *rfile;
 	int linenum;
 	char *line;
-	pthread_mutex_t lock;
+	pthread_mutex_t lock; // 뮤텍스 데이터 타입의 변수
 	int full;
 } so_t;
 
@@ -66,19 +66,25 @@ void *consumer(void *arg) {
 
 int main (int argc, char *argv[])
 {
-	pthread_t prod[100];
-	pthread_t cons[100];
+	pthread_t prod[100]; 
+	pthread_t cons[100]; // 스레드 선언
 	int Nprod, Ncons;
 	int rc;   long t;
 	int *ret;
 	int i;
 	FILE *rfile;
+
+
+	//명령줄 인수가 프로그램이름(또는 경로) 한가지인 경우
 	if (argc == 1) {
 		printf("usage: ./prod_cons <readfile> #Producer #Consumer\n");
 		exit (0);
 	}
-	so_t *share = malloc(sizeof(so_t));
-	memset(share, 0, sizeof(so_t));
+
+	so_t *share = malloc(sizeof(so_t)); //share object 생성
+	memset(share, 0, sizeof(so_t)); // so의 내용을 0으로 초기화
+
+
 	rfile = fopen((char *) argv[1], "r");
 	if (rfile == NULL) {
 		perror("rfile");
@@ -97,15 +103,19 @@ int main (int argc, char *argv[])
 
 	share->rfile = rfile;
 	share->line = NULL;
-	pthread_mutex_init(&share->lock, NULL);
+	pthread_mutex_init(&share->lock, NULL); // 뮤텍스 초기화 // 뮤텍스에 NULL을 넣는다는 것이 아니라 기본값으로 초기화 한다는 의미
+
+
 	for (i = 0 ; i < Nprod ; i++)
-		pthread_create(&prod[i], NULL, producer, share);
+		pthread_create(&prod[i], NULL, producer, share); // 스레드 생성함수
+
 	for (i = 0 ; i < Ncons ; i++)
 		pthread_create(&cons[i], NULL, consumer, share);
+
 	printf("main continuing\n");
 
 	for (i = 0 ; i < Ncons ; i++) {
-		rc = pthread_join(cons[i], (void **) &ret);
+		rc = pthread_join(cons[i], (void **) &ret); // 생성된 스레드가 종료될 때 까지 기다리는 함수
 		printf("main: consumer_%d joined with %d\n", i, *ret);
 	}
 	for (i = 0 ; i < Nprod ; i++) {
