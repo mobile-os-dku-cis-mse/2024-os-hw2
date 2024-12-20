@@ -25,18 +25,6 @@ To keeping consistency, you should carefully control the execution among threads
 pthread_mutex_lock()/pthread_mutex_unlock are the functions for pthreads synchorinization.
 For condition variable, you may need to look up functions such as pthread_cond_wait()/pthread_cond_signal().
 
-The goals from HW2 are 
-
-1. correct the code for prod_cons.c so that it works with 1 producer and 1 consumer
-
-2. enhance it to support multiple consumers.
-
-3. Make consumer(s) to gather some statistics of the given text in the file. 
-Basically, count the number of each alphabet character in the line.
-char_stat.c can be a hint for gathering statistics.
-At the end of execution, you should print out the statistics of the entire text.
-Beat the fastest execution, maximizing the concurrency!
-
 To run a program, you may give filename to read and # of producers and # of consumers.
 In case of single producer, 2 consumers, reading 'sample file'; you may need to execute your program by
 ./prod_cons ./sample 1 2 
@@ -44,12 +32,64 @@ In case of single producer, 2 consumers, reading 'sample file'; you may need to 
 You can download some example input source code from the link: [https://mobile-os.dankook.ac.kr/data/FreeBSD9-orig.tar] or  
 you can use /opt/FreeBSD9-orig.tar from our server.
 
-Please make some document so that I can follow to build/compile and run the code.
-It would be better if the document includes some introduction and some important implementation details or your program structure.
+# Documentation:
 
-htop is a program that shows threads execution in the system.
+## Prerequisites
 
-Measure & compare of execution time for different # of threads
+- [GCC](https://gcc.gnu.org/)
+- [Make](https://www.gnu.org/software/make/)
+- [Git](https://git-scm.com/)
 
-Happy hacking!
-Seehwan
+## Installation:
+
+To install the project, clone the repository and navigate to the project directory:
+
+```bash
+git clone
+cd os_hw2
+git switch 32229349
+```
+
+## Compilation:
+
+To compile the project, run the following command:
+
+```bash
+make
+```
+
+## Execution:
+
+To run the project, run the following command:
+
+```bash
+./threading ./sample 1 2
+```
+
+
+# Implementation
+
+```c
+typedef struct {
+    char* lines[BUFFER_SIZE];
+    int head;
+    int tail;
+    int count;
+    pthread_mutex_t mutex;
+    pthread_cond_t not_full;
+    pthread_cond_t not_empty;
+} buffer_t;
+
+typedef struct {
+    buffer_t* buffer;
+    char* filename;
+    int num_producers;
+    int producer_index;
+} producer_args_t;
+
+typedef struct {
+    buffer_t* buffer;
+} consumer_args_t;
+```
+
+this is the structure of my code especialy for the consummer
